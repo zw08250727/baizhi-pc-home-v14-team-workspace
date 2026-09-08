@@ -37,6 +37,7 @@ body[data-workspace="team"] .team-workspace-dashboard { display: none !important
 .team-files-groups { display: none; }
 body[data-workspace="team"] .team-files-groups { display: block !important; }
 .team-file-group { margin-bottom: 2px; }
+#personal-enterprise-card { display: none !important; }
 .team-file-group > .tree-folder-toggle { grid-template-columns: 12px 15px minmax(0, 1fr) auto; }
 .team-file-group > .knowledge-tree-children { padding: 2px 0 4px 19px; border-left: 1px solid #edf0f5; margin-left: 10px; }
 .team-file-group > .knowledge-tree-children > .knowledge-leaf { min-height: 31px; padding-left: 8px; font-size: 11px; }

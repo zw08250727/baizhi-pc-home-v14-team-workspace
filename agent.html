@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Agent 会话 · 百智 AI 工作台</title>
+  <style>
+    :root {
+      --blue: #2f66df;
+      --blue-strong: #2458cc;
+      --violet: #7255df;
+      --ink: #263247;
+      --sub: #5f6c80;
+      --muted: #8c96a6;
+      --line: #e5e9f0;
+      --line-soft: #edf0f4;
+      --surface: #ffffff;
+      --canvas: #f6f7fa;
+      --soft-blue: #edf3ff;
+      --soft-violet: #f3efff;
+      --success: #30866b;
+      --sidebar-width: 240px;
+      --panel-width: 280px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; }
+    body { overflow: hidden; color: var(--ink); background: var(--canvas); font-family: MiSans, "PingFang SC", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; }
+    button, textarea { font: inherit; }
+    button { color: inherit; }
+    [hidden] { display: none !important; }
+    .icon { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+
+    .agent-app { display: grid; width: 100%; min-width: 1120px; height: 100vh; grid-template-columns: var(--sidebar-width) minmax(0, 1fr) 0; background: var(--canvas); transition: grid-template-columns 180ms ease; }
+    .agent-app.panel-open { grid-template-columns: var(--sidebar-width) minmax(0, 1fr) var(--panel-width); }
+
+    .agent-sidebar { display: flex; min-height: 0; padding: 17px 13px 14px; border-right: 1px solid var(--line); background: var(--surface); flex-direction: column; }
+    .agent-back { display: inline-flex; width: fit-content; align-items: center; gap: 7px; padding: 6px 8px; border: 0; border-radius: 8px; color: #707b8c; background: transparent; cursor: pointer; font-size: 11px; text-decoration: none; }
+    .agent-back:hover { color: var(--blue); background: #f5f7fb; }
+    .agent-back .icon { width: 14px; height: 14px; transform: rotate(90deg); }
+    .agent-identity { display: grid; min-width: 0; align-items: center; gap: 10px; margin: 9px 5px 15px; grid-template-columns: 38px minmax(0, 1fr); }
+    .agent-portrait { width: 38px; height: 38px; overflow: hidden; border: 1px solid #dfe5f0; border-radius: 12px; background: linear-gradient(145deg, #edf4ff, #f4efff); }
+    .agent-portrait img { width: 100%; height: 100%; object-fit: cover; }
+    .agent-identity h1, .agent-identity p { overflow: hidden; margin: 0; text-overflow: ellipsis; white-space: nowrap; }
+    .agent-identity h1 { font-size: 13px; font-weight: 680; line-height: 20px; }
+    .agent-identity p { margin-top: 2px; color: var(--muted); font-size: 9px; line-height: 14px; }
+    .new-task-button { display: inline-flex; height: 39px; align-items: center; justify-content: center; gap: 7px; margin: 0 1px 14px; border: 1px solid #dce4fb; border-radius: 10px; color: var(--blue); background: linear-gradient(110deg, #eff5ff, #f3efff); cursor: pointer; font-size: 11px; font-weight: 650; }
+    .new-task-button:hover { border-color: #c8d5fa; background: linear-gradient(110deg, #e9f1ff, #eee9ff); }
+    .new-task-button .icon { width: 15px; height: 15px; }
+    .history-title { display: flex; align-items: center; justify-content: space-between; padding: 0 8px 5px; color: #747f90; font-size: 10px; font-weight: 650; }
+    .history-title span:last-child { color: #a4acb8; font-size: 8px; font-weight: 500; }
+    .task-history { min-height: 0; overflow: auto; padding: 0 1px 8px; flex: 1; }
+    .history-empty { padding: 18px 8px; color: #a0a8b5; font-size: 10px; line-height: 18px; text-align: center; }
+    .task-group-label { margin: 12px 8px 4px; color: #a0a8b5; font-size: 8px; }
+    .task-row { display: grid; width: 100%; min-height: 34px; align-items: center; gap: 7px; padding: 7px 8px; border: 0; border-radius: 8px; color: #566276; background: transparent; cursor: pointer; grid-template-columns: 7px minmax(0,1fr); text-align: left; }
+    .task-row:hover { color: #32435e; background: #f5f7fa; }
+    .task-row.active { color: #2d60c6; background: var(--soft-blue); font-weight: 620; }
+    .task-row i { width: 6px; height: 6px; border: 1px solid #b2bac6; border-radius: 50%; }
+    .task-row.running i { border-color: #6380ed; background: #6380ed; box-shadow: 0 0 0 3px rgba(99,128,237,.1); }
+    .task-row span { overflow: hidden; font-size: 9px; line-height: 17px; text-overflow: ellipsis; white-space: nowrap; }
+    .agent-account { display: grid; align-items: center; gap: 8px; margin: 10px 3px 0; padding: 11px 6px 0; border-top: 1px solid var(--line-soft); grid-template-columns: 28px minmax(0, 1fr); }
+    .account-avatar { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 50%; color: #fff; background: linear-gradient(145deg, #356df2, #7651df); }
+    .account-avatar .icon { width: 14px; height: 14px; }
+    .agent-account strong, .agent-account small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .agent-account strong { font-size: 10px; line-height: 15px; }
+    .agent-account small { color: #9099a7; font-size: 8px; line-height: 13px; }
+
+    .agent-main { display: grid; min-width: 0; height: 100vh; grid-template-rows: 56px minmax(0, 1fr) auto; }
+    .agent-topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 22px; border-bottom: 1px solid var(--line); background: rgba(255, 255, 255, .94); }
+    .task-heading { display: flex; min-width: 0; align-items: center; gap: 10px; }
+    .task-heading strong { overflow: hidden; font-size: 12px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+    .agent-mode { display: inline-flex; align-items: center; gap: 5px; padding: 4px 7px; border: 1px solid #d8e2fb; border-radius: 7px; color: var(--blue); background: #f5f8ff; font-size: 8px; }
+    .topbar-actions { display: flex; align-items: center; gap: 7px; }
+    .source-pill, .file-panel-toggle { display: inline-flex; height: 30px; align-items: center; gap: 6px; padding: 0 9px; border: 1px solid #dfe4ec; border-radius: 8px; color: #687488; background: #fff; cursor: pointer; font-size: 9px; }
+    .source-pill:hover, .file-panel-toggle:hover { color: var(--blue); border-color: #cbd8f2; background: #f8faff; }
+    .source-pill .icon, .file-panel-toggle .icon { width: 13px; height: 13px; }
+
+    .agent-stage { min-height: 0; overflow: auto; }
+    .new-task-view { display: flex; min-height: 100%; align-items: center; justify-content: center; padding: 44px 32px 70px; }
+    .welcome { width: min(760px, 100%); text-align: center; }
+    .welcome-mark { position: relative; display: inline-grid; width: 58px; height: 58px; place-items: center; overflow: hidden; border: 1px solid #d8e2fa; border-radius: 19px; color: #fff; background: linear-gradient(145deg, #316fe8, #7355df); box-shadow: 0 16px 32px rgba(57, 91, 190, .15); }
+    .welcome-mark::after { position: absolute; width: 42px; height: 42px; border: 1px solid rgba(255,255,255,.22); border-radius: 50%; content: ""; transform: translate(18px, -18px); }
+    .welcome-mark .icon { width: 27px; height: 27px; }
+    .welcome h2 { margin: 18px 0 6px; color: #202b3f; font-size: 27px; font-weight: 680; letter-spacing: -.03em; }
+    .welcome-role { margin: 0; color: var(--blue); font-size: 11px; font-weight: 600; }
+    .welcome-description { max-width: 600px; margin: 12px auto 0; color: #6e798b; font-size: 12px; line-height: 21px; }
+    .suggestion-label { margin: 28px 0 9px; color: #98a1af; font-size: 9px; }
+    .agent-suggestions { display: grid; gap: 8px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .suggestion { min-height: 58px; padding: 10px 12px; border: 1px solid #e1e6ee; border-radius: 11px; color: #4f5c70; background: rgba(255,255,255,.82); cursor: pointer; font-size: 10px; line-height: 17px; text-align: left; }
+    .suggestion:hover { color: #315fb8; border-color: #cbd8ef; background: #fff; }
+
+    .conversation-view { min-height: 100%; padding: 25px 0 40px; }
+    .conversation-stream { width: min(820px, calc(100% - 56px)); margin: 0 auto; }
+    .message { margin-bottom: 14px; }
+    .message-user { display: flex; justify-content: flex-end; }
+    .message-user > div { max-width: 68%; padding: 10px 13px; border-radius: 12px 12px 3px 12px; color: #344157; background: #eaf0ff; font-size: 11px; line-height: 19px; }
+    .message-agent { padding: 15px 16px; border: 1px solid #e3e8ef; border-radius: 13px; background: #fff; }
+    .message-agent h3 { margin: 0; color: #28354a; font-size: 12px; line-height: 19px; }
+    .message-agent > p { margin: 11px 0 0; color: #5f6c80; font-size: 10px; line-height: 18px; }
+    .task-progress { margin: 13px 0 10px 2px; padding-left: 13px; border-left: 2px solid #6f83eb; }
+    .progress-step { display: flex; align-items: center; gap: 7px; margin: 7px 0; color: #5f6c80; font-size: 9px; line-height: 16px; }
+    .progress-step.done { color: var(--success); }
+    .progress-step i { width: 6px; height: 6px; border-radius: 50%; background: #6f83eb; }
+    .progress-step.done i { background: #39a17d; }
+    .tool-call { margin: 7px 0; }
+    .tool-call-button { display: grid; width: 100%; min-height: 32px; align-items: center; gap: 7px; padding: 6px 8px; border: 1px solid #e6e9ef; border-radius: 8px; color: #5f6b7e; background: #f8f9fb; cursor: pointer; grid-template-columns: auto minmax(0,1fr) auto; text-align: left; }
+    .tool-call-button:hover { border-color: #d8e0ed; background: #f5f8fd; }
+    .tool-call-button strong { color: #3b485d; font-size: 9px; }
+    .tool-call-button span { overflow: hidden; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+    .tool-call-button em { color: #9aa2af; font-size: 8px; font-style: normal; }
+    .tool-call-detail { margin: 4px 6px 0; padding: 7px 9px; border-left: 1px solid #dce3ef; color: #7b8697; font-size: 8px; line-height: 15px; }
+    .source-links { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 11px; }
+    .source-link { padding: 5px 7px; border: 1px solid #e3e7ee; border-radius: 7px; color: #68758a; background: #fff; cursor: pointer; font-size: 8px; }
+    .source-link:hover { color: var(--blue); border-color: #cbd8ef; }
+    .output-files { display: grid; gap: 7px; margin-top: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .output-file { display: grid; min-height: 50px; align-items: center; gap: 9px; padding: 8px 10px; border: 1px solid #e2e7ee; border-radius: 9px; color: #39465a; background: #fff; cursor: pointer; grid-template-columns: 28px minmax(0,1fr); text-align: left; }
+    .output-file:hover { border-color: #cbd8ef; background: #fafdff; }
+    .file-mark { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 8px; color: #fff; background: linear-gradient(145deg, #426ff0, #6852d8); font-size: 8px; font-weight: 700; }
+    .output-file strong, .output-file small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .output-file strong { font-size: 9px; line-height: 15px; }
+    .output-file small { margin-top: 1px; color: #929baa; font-size: 8px; line-height: 13px; }
+
+    .agent-composer-wrap { width: min(850px, calc(100% - 50px)); margin: 0 auto 18px; padding: 10px 11px 9px; border: 1px solid #dce2eb; border-radius: 14px; background: #fff; box-shadow: 0 9px 26px rgba(36, 52, 83, .07); }
+    .agent-composer-wrap:focus-within { border-color: #aebff1; box-shadow: 0 0 0 3px rgba(53, 105, 226, .07), 0 9px 26px rgba(36, 52, 83, .07); }
+    .agent-input { display: block; width: 100%; min-height: 54px; max-height: 132px; resize: none; padding: 4px 5px; border: 0; outline: none; color: #293448; background: transparent; font-size: 12px; line-height: 20px; }
+    .agent-input::placeholder { color: #abb2bf; }
+    .composer-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 4px; }
+    .composer-tools { display: flex; min-width: 0; align-items: center; gap: 6px; }
+    .composer-tool { display: inline-flex; height: 27px; align-items: center; gap: 5px; padding: 0 7px; border: 0; border-radius: 7px; color: #748095; background: transparent; cursor: pointer; font-size: 8px; }
+    .composer-tool:hover { color: var(--blue); background: #f3f6fb; }
+    .composer-tool .icon { width: 13px; height: 13px; }
+    .agent-send { display: inline-grid; width: 31px; height: 31px; place-items: center; border: 0; border-radius: 9px; color: #fff; background: linear-gradient(145deg, #346ee8, #6553dd); cursor: pointer; }
+    .agent-send:disabled { color: #aeb5c2; background: #e7e9ee; cursor: default; }
+    .agent-send .icon { width: 15px; height: 15px; }
+    .ai-disclaimer { margin: -9px 0 7px; color: #a7aebb; font-size: 8px; text-align: center; }
+
+    .task-file-panel { min-width: 0; overflow: hidden; border-left: 0 solid transparent; background: #fff; opacity: 0; pointer-events: none; transition: opacity 150ms ease; }
+    .panel-open .task-file-panel { border-left: 1px solid var(--line); opacity: 1; pointer-events: auto; }
+    .panel-inner { display: flex; width: var(--panel-width); height: 100vh; flex-direction: column; }
+    .panel-head { display: flex; min-height: 56px; align-items: center; justify-content: space-between; padding: 0 16px; border-bottom: 1px solid var(--line); }
+    .panel-head strong { font-size: 12px; }
+    .panel-close { display: inline-grid; width: 28px; height: 28px; place-items: center; border: 0; border-radius: 7px; color: #828c9c; background: transparent; cursor: pointer; }
+    .panel-close:hover { color: #3e4c62; background: #f2f4f7; }
+    .panel-close .icon { width: 14px; height: 14px; }
+    .panel-body { min-height: 0; overflow: auto; padding: 15px; flex: 1; }
+    .panel-placeholder { display: grid; min-height: 220px; place-items: center; color: #9ba3b0; font-size: 10px; text-align: center; }
+    .panel-section { padding: 1px 0 14px; border-bottom: 1px solid var(--line-soft); }
+    .panel-section + .panel-section { padding-top: 14px; }
+    .panel-section:last-child { border-bottom: 0; }
+    .panel-section-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; color: #465267; font-size: 9px; font-weight: 650; }
+    .panel-section-title span { color: #8e98a7; font-size: 8px; font-weight: 500; }
+    .progress-track { height: 5px; overflow: hidden; border-radius: 5px; background: #ebedf3; }
+    .progress-track i { display: block; width: 64%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #3974ea, #7358df); }
+    .panel-progress-copy { display: flex; justify-content: space-between; margin-top: 7px; color: #858f9f; font-size: 8px; }
+    .panel-file { display: grid; width: 100%; align-items: center; gap: 8px; padding: 8px 4px; border: 0; border-bottom: 1px solid #f0f2f5; color: #3f4b5e; background: transparent; cursor: pointer; grid-template-columns: 26px minmax(0,1fr); text-align: left; }
+    .panel-file:hover { background: #f7f9fc; }
+    .panel-file .file-mark { width: 26px; height: 26px; border-radius: 7px; }
+    .panel-file strong, .panel-file small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .panel-file strong { font-size: 9px; line-height: 15px; }
+    .panel-file small { color: #959daa; font-size: 8px; line-height: 13px; }
+    .panel-source { display: flex; align-items: center; justify-content: space-between; padding: 7px 2px; color: #5f6c80; font-size: 9px; }
+    .panel-source span { color: #929baa; font-size: 8px; }
+    .file-preview-head { display: flex; align-items: center; gap: 7px; margin-bottom: 13px; }
+    .preview-back { padding: 5px 7px; border: 1px solid #e0e5ed; border-radius: 7px; color: #647186; background: #fff; cursor: pointer; font-size: 8px; }
+    .file-preview h2 { margin: 0; color: #344156; font-size: 11px; }
+    .file-preview p { color: #707c8e; font-size: 8px; line-height: 15px; }
+    .preview-table-wrap { overflow: auto; border: 1px solid #e3e7ed; border-radius: 8px; }
+    .preview-table { width: 100%; border-collapse: collapse; font-size: 7px; white-space: nowrap; }
+    .preview-table th, .preview-table td { padding: 7px 6px; border-bottom: 1px solid #edf0f4; text-align: left; }
+    .preview-table th { color: #667286; background: #f6f8fb; font-weight: 650; }
+    .preview-table td { color: #4e5b6f; }
+
+    button:focus-visible, a:focus-visible, textarea:focus-visible { outline: 2px solid rgba(47, 102, 223, .48); outline-offset: 2px; }
+    @media (max-width: 1200px) {
+      :root { --sidebar-width: 220px; --panel-width: 260px; }
+      .agent-app { min-width: 1000px; }
+      .agent-suggestions { grid-template-columns: 1fr; }
+      .suggestion { min-height: 44px; }
+    }
+  </style>
+  <link rel="stylesheet" href="assets/agent-artifacts.css" />
+  <script src="assets/agent-artifacts-model.js"></script>
+  <script src="assets/agent-artifacts-results.js"></script>
+</head>
+<body data-edition="enterprise">
+  <svg width="0" height="0" aria-hidden="true" style="position:absolute">
+    <symbol id="ico-chevron" viewBox="0 0 16 17"><path d="m4 6.25 4 4 4-4"/></symbol>
+    <symbol id="ico-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="ico-user" viewBox="0 0 16 16"><circle cx="8" cy="5.2" r="2.4"/><path d="M3.5 14a4.5 4.5 0 0 1 9 0"/></symbol>
+    <symbol id="ico-spark" viewBox="0 0 24 24"><path d="m12 3 1.5 5.5L19 10l-5.5 1.5L12 17l-1.5-5.5L5 10l5.5-1.5ZM19 16l.7 2.3L22 19l-2.3.7L19 22l-.7-2.3L16 19l2.3-.7Z"/></symbol>
+    <symbol id="ico-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.8 12h16.4M12 3.5c2.2 2.4 3.2 5.2 3.2 8.5S14.2 18.1 12 20.5C9.8 18.1 8.8 15.3 8.8 12S9.8 5.9 12 3.5Z"/></symbol>
+    <symbol id="ico-folder" viewBox="0 0 16 16"><path d="M5.837 2H3.1a1.6 1.6 0 0 0-1.6 1.6v8.8A1.6 1.6 0 0 0 3.1 14h9.8a1.6 1.6 0 0 0 1.6-1.6V5.6A1.6 1.6 0 0 0 12.9 4H9.163a1.6 1.6 0 0 1-1.132-.469L6.969 2.469A1.6 1.6 0 0 0 5.837 2Z"/></symbol>
+    <symbol id="ico-book" viewBox="0 0 24 24"><path d="M5 4.5h11.5A2.5 2.5 0 0 1 19 7v12.5H7.5A2.5 2.5 0 0 1 5 17Z"/><path d="M5 17a2.5 2.5 0 0 0 2.5 2.5M8 8h7M8 11.5h6"/></symbol>
+    <symbol id="ico-send" viewBox="0 0 24 24"><path d="m4 4 16 8-16 8 3-8Z"/><path d="M7 12h13"/></symbol>
+    <symbol id="ico-close" viewBox="0 0 16 16"><path d="m4 4 8 8M12 4l-8 8"/></symbol>
+  </svg>
+
+  <div class="agent-app" id="agent-app">
+    <aside class="agent-sidebar" id="agent-sidebar">
+      <button class="agent-back" id="agent-back" type="button"><svg class="icon"><use href="#ico-chevron"/></svg>返回我的 AI 工作台</button>
+      <div class="agent-identity">
+        <span class="agent-portrait"><img id="agent-portrait" src="assets/experts/general-agent.png" alt="" /></span>
+        <span><h1 id="agent-name">通用智能体</h1><p id="agent-role">复杂任务协作专家</p></span>
+      </div>
+      <button class="new-task-button" id="agent-new-task" type="button"><svg class="icon"><use href="#ico-plus"/></svg>新任务</button>
+      <div class="history-title"><span>任务历史</span><span>全部</span></div>
+      <nav class="task-history" id="task-history" aria-label="Agent 任务历史"><div class="history-empty">任务开始后会显示在这里</div></nav>
+      <div class="agent-account"><span class="account-avatar"><svg class="icon"><use href="#ico-user"/></svg></span><span><strong>张伟</strong><small id="account-edition">企业版 · 百融智能</small></span></div>
+    </aside>
+
+    <main class="agent-main">
+      <header class="agent-topbar">
+        <div class="task-heading"><strong id="task-title">新任务</strong><span class="agent-mode">专家模式</span></div>
+        <div class="topbar-actions"><button class="source-pill" id="source-pill" type="button"><svg class="icon"><use href="#ico-globe"/></svg><span id="source-label">企业知识库 · 全域网站</span></button><button class="file-panel-toggle" id="task-file-panel-toggle" type="button"><svg class="icon"><use href="#ico-folder"/></svg>任务文件</button></div>
+      </header>
+
+      <div class="agent-stage">
+        <section class="new-task-view" id="new-task-view" aria-label="开始新任务">
+          <div class="welcome"><span class="welcome-mark"><svg class="icon"><use href="#ico-spark"/></svg></span><h2>和 <span id="welcome-agent-name">通用智能体</span> 一起工作</h2><p class="welcome-role" id="welcome-role">复杂任务协作专家</p><p class="welcome-description" id="agent-description"></p><p class="suggestion-label">可以从这些任务开始</p><div class="agent-suggestions" id="agent-suggestions"></div></div>
+        </section>
+        <section class="conversation-view" id="conversation-view" hidden aria-label="Agent 会话"><div class="conversation-stream" id="conversation-stream"></div></section>
+      </div>
+
+      <form class="agent-composer-wrap" id="agent-composer-form">
+        <textarea class="agent-input" id="agent-input" rows="2" aria-label="告诉 Agent 你的任务" placeholder="告诉 Agent 你想完成什么…"></textarea>
+        <div class="composer-footer"><div class="composer-tools"><button class="composer-tool" type="button"><svg class="icon"><use href="#ico-plus"/></svg>添加附件</button><button class="composer-tool" type="button"><svg class="icon"><use href="#ico-book"/></svg><span id="knowledge-source-label">引用企业知识库</span></button><button class="composer-tool" type="button"><svg class="icon"><use href="#ico-globe"/></svg>全域网站</button></div><button class="agent-send" id="agent-send" type="submit" disabled aria-label="发送任务"><svg class="icon"><use href="#ico-send"/></svg></button></div>
+      </form>
+      <p class="ai-disclaimer">内容由 AI 生成，仅供参考，请仔细甄别</p>
+    </main>
+
+    <aside class="task-file-panel" id="task-file-panel" aria-hidden="true">
+      <div class="panel-inner"><header class="panel-head"><strong>任务文件</strong><button class="panel-close" id="task-file-panel-close" type="button" aria-label="关闭任务文件面板"><svg class="icon"><use href="#ico-close"/></svg></button></header><div class="panel-body"><div class="panel-placeholder">开始任务后，这里会显示执行进度、引用来源与生成文件。</div><div id="task-file-list"></div><section id="file-preview" hidden></section></div></div>
+    </aside>
+  </div>
+
+  <script>
+    const agentProfiles = {
+      "销售简报 Agent": { role: "销售数据分析专家", description: AgentArtifacts.description, portrait: "assets/experts/business-insight-expert.png", prompts: ["生成本周华东销售简报", "汇总各区域销售目标达成情况", "分析本月销售风险"] },
+      "报告撰写助手": { role: "内容交付专家", description: "结合会议、知识文件与补充材料，组织信息结构并生成可继续编辑的交付报告。", portrait: "assets/experts/report-writing-expert.png", prompts: ["根据最近一次产品复盘生成报告", "把现有资料整理成项目周报", "生成一份客户汇报提纲"] },
+      "市场分析助手": { role: "市场研究专家", description: "整合已有资料与公开信息，梳理市场、竞争和客户反馈，形成清晰、可核验的分析。", portrait: "assets/experts/market-analysis-expert.png", prompts: ["寻找华东地区的潜在零售客户", "分析三个主要竞品的差异", "整理本季度行业机会"] },
+      "经营洞察助手": { role: "经营分析专家", description: "从企业会议与业务资料中识别趋势、风险、关键机会和下一步行动建议。", portrait: "assets/experts/business-insight-expert.png", prompts: ["分析本季度经营风险", "汇总近期会议中的重点机会", "生成管理层经营摘要"] },
+      "通用智能体": { role: "复杂任务协作专家", description: "接受开放目标，协助拆解问题、引用资料、调用技能，并持续完成多步骤任务。", portrait: "assets/experts/general-agent.png", prompts: ["帮我规划一个复杂任务", "结合知识库整理行动方案", "分析资料并生成可交付文件"] }
+    };
+    const params = new URLSearchParams(window.location.search);
+    const requestedAgent = params.get("agent");
+    const agentName = Object.prototype.hasOwnProperty.call(agentProfiles, requestedAgent) ? requestedAgent : "通用智能体";
+    const profile = agentProfiles[agentName];
+    const edition = params.get("edition") === "personal" ? "personal" : "enterprise";
+    const $ = (selector) => document.querySelector(selector);
+    const resolveAgent = (name) => agentProfiles[name] || agentProfiles["通用智能体"];
+    const escapeHTML = (value) => String(value).replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[character]));
+
+    const taskGroups = [
+      { label: "今天", tasks: [
+        { id: "lead-research", title: "寻找华东区零售客户线索", status: "running", prompt: "请帮我寻找华东地区有数字化升级需求的零售企业，整理可核验的客户线索。", summary: "已完成首轮筛选，找到 18 家符合条件的企业，其中 7 家具有明确的门店数字化计划。", progress: 64 }
+      ] },
+      { label: "7 天内", tasks: [
+        { id: "weekly-opportunities", title: "整理本周重点商机", status: "done", prompt: "整理本周销售会议中的重点商机，并按跟进优先级排序。", summary: "已汇总 12 个商机，按预计金额、推进阶段和风险信号完成分级。", progress: 100 },
+        { id: "department-store", title: "筛选连锁百货潜在客户", status: "done", prompt: "筛选有门店智能化改造需求的连锁百货客户。", summary: "已形成 9 家连锁百货候选名单，并补充近期扩店和招投标信号。", progress: 100 }
+      ] },
+      { label: "更早", tasks: [
+        { id: "south-china-map", title: "华南区域客户研究", status: "done", prompt: "研究华南地区零售行业潜在客户分布。", summary: "已按城市与业态整理客户分布，并标记 6 家优先研究企业。", progress: 100 }
+      ] }
+    ];
+    const files = {
+      "lead-list": { name: "华东零售客户线索.xlsx", type: "XLSX", meta: "18 条线索 · 2026-09-04 14:18" },
+      "verification-note": { name: "线索核验说明.md", type: "MD", meta: "6 个引用来源 · 2026-09-04 14:18" }
+    };
+    let activeTaskId = null;
+
+    const allTasks = () => taskGroups.flatMap((group) => group.tasks);
+    const findTask = (id) => allTasks().find((task) => task.id === id) || allTasks()[0];
+    const renderTaskHistory = () => {
+      $("#task-history").innerHTML = taskGroups.map((group) => `<section><div class="task-group-label">${group.label}</div>${group.tasks.map((task) => `<button class="task-row ${task.status === "running" ? "running" : ""} ${activeTaskId === task.id ? "active" : ""}" type="button" data-task-id="${task.id}"><i></i><span>${escapeHTML(task.title)}</span></button>`).join("")}</section>`).join("");
+    };
+    const renderToolCall = (label, detail, state = "已完成") => `<div class="tool-call"><button class="tool-call-button" type="button" data-tool-call aria-expanded="false"><strong>${label}</strong><span>${detail}</span><em>${state}　⌄</em></button><div class="tool-call-detail" data-tool-detail hidden>已记录输入条件、执行时间和来源范围。点击工具行可以收起详情。</div></div>`;
+    const renderConversation = (task) => ArtifactResults.sales(task) ? ArtifactResults.conversation(task) : `<article class="message message-user"><div>${escapeHTML(task.prompt)}</div></article><article class="message message-agent"><h3>${task.progress < 100 ? "正在执行客户线索研究" : "任务已完成"}</h3><div class="task-progress"><div class="progress-step done"><i></i>明确目标市场与筛选条件</div>${renderToolCall("搜索网页", "华东地区零售企业、数字化升级与扩店计划")}${renderToolCall(edition === "personal" ? "读取我的知识库" : "读取企业知识库", "零售行业客户画像与历史商机")}${renderToolCall("数据核验", "企业动态、业务范围与联系人证据链", task.progress < 100 ? "执行中" : "已完成")}<div class="progress-step ${task.progress === 100 ? "done" : ""}"><i></i>${task.progress === 100 ? "生成最终交付文件" : "正在核验企业与联系人信息"}</div></div><p>${escapeHTML(task.summary)}</p><div class="source-links"><button class="source-link" type="button" data-source-id="retail-report">零售行业数字化报告</button><button class="source-link" type="button" data-source-id="company-news">企业新闻与招聘动态</button></div><div class="output-files"><button class="output-file" type="button" data-file-id="lead-list"><span class="file-mark">X</span><span><strong>${files["lead-list"].name}</strong><small>${files["lead-list"].meta}</small></span></button><button class="output-file" type="button" data-file-id="verification-note"><span class="file-mark">M</span><span><strong>${files["verification-note"].name}</strong><small>${files["verification-note"].meta}</small></span></button></div></article>`;
+
+    const renderFileList = (task) => {
+      $("#file-preview").hidden = true;
+      $("#task-file-list").hidden = false;
+      $("#task-file-list").innerHTML = `<section class="panel-section"><div class="panel-section-title">执行进度 <span>${task.progress}%</span></div><div class="progress-track"><i style="width:${task.progress}%"></i></div><div class="panel-progress-copy"><span>${task.progress < 100 ? "正在核验企业联系人" : "任务已完成"}</span><span>${task.progress < 100 ? "3 / 4" : "4 / 4"}</span></div></section><section class="panel-section"><div class="panel-section-title">生成文件 <span>${Object.keys(files).length}</span></div>${Object.entries(files).map(([id, file]) => `<button class="panel-file" type="button" data-file-id="${id}"><span class="file-mark">${file.type === "XLSX" ? "X" : "M"}</span><span><strong>${file.name}</strong><small>${file.meta}</small></span></button>`).join("")}</section><section class="panel-section"><div class="panel-section-title">引用来源 <span>6</span></div><button class="panel-source" type="button" data-source-id="retail-report">零售行业数字化报告 <span>网页</span></button><button class="panel-source" type="button" data-source-id="company-news">企业新闻与招聘动态 <span>网页</span></button><button class="panel-source" type="button" data-source-id="knowledge">${edition === "personal" ? "我的知识文件" : "企业零售客户画像"} <span>知识库</span></button></section>`;
+    };
+
+    const setFilePanelOpen = (open) => {
+      $("#agent-app").classList.toggle("panel-open", open);
+      $("#task-file-panel").setAttribute("aria-hidden", String(!open));
+      $("#task-file-panel-toggle").setAttribute("aria-expanded", String(open));
+    };
+    const openFilePreview = (fileId) => {
+      const file = files[fileId];
+      if (!file) return;
+      $("#task-file-list").hidden = true;
+      const preview = $("#file-preview");
+      preview.className = "file-preview";
+      preview.hidden = false;
+      preview.innerHTML = fileId === "lead-list" ? `<div class="file-preview-head"><button class="preview-back" id="file-preview-back" type="button">← 返回文件列表</button></div><h2>华东零售客户线索.xlsx</h2><p>根据公开信息与已授权知识资料生成，更新时间 2026-09-04 14:18。</p><div class="preview-table-wrap"><table class="preview-table"><thead><tr><th>企业名称</th><th>区域</th><th>机会信号</th><th>优先级</th></tr></thead><tbody><tr><td>东辰商业</td><td>上海</td><td>门店数字化招标</td><td>高</td></tr><tr><td>华悦零售</td><td>浙江</td><td>新开 12 家门店</td><td>高</td></tr><tr><td>苏城百货</td><td>江苏</td><td>招聘数据产品负责人</td><td>中</td></tr><tr><td>海岸生活</td><td>福建</td><td>会员系统升级</td><td>中</td></tr></tbody></table></div>` : `<div class="file-preview-head"><button class="preview-back" id="file-preview-back" type="button">← 返回文件列表</button></div><h2>线索核验说明.md</h2><p><strong>核验范围</strong></p><p>企业官网、公开新闻、招聘信息与已授权知识文件。每条线索至少保留一个可追溯来源。</p><p><strong>使用建议</strong></p><p>优先联系已出现扩店、招投标或数字化岗位招聘信号的企业。</p>`;
+      ArtifactResults.augmentPreview(fileId);
+      preview.querySelector("#file-preview-back").addEventListener("click", () => renderFileList(findTask(activeTaskId)));
+    };
+    const renderTask = (taskId) => {
+      const task = findTask(taskId);
+      ArtifactResults.configureTask(task);
+      activeTaskId = task.id;
+      $("#new-task-view").hidden = true;
+      $("#conversation-view").hidden = false;
+      $("#task-title").textContent = task.title;
+      $("#conversation-stream").innerHTML = renderConversation(task);
+      renderTaskHistory();
+      renderFileList(task);
+      setFilePanelOpen(true);
+      $(".agent-stage").scrollTop = 0;
+    };
+    const renderNewTask = () => {
+      activeTaskId = null;
+      $("#new-task-view").hidden = false;
+      $("#conversation-view").hidden = true;
+      $("#task-title").textContent = "新任务";
+      $("#agent-input").value = "";
+      $("#agent-send").disabled = true;
+      renderTaskHistory();
+      setFilePanelOpen(false);
+    };
+    const startTask = (prompt) => {
+      const task = findTask("lead-research");
+      task.prompt = prompt;
+      task.title = prompt.includes("华东") ? "寻找华东区零售客户线索" : prompt.slice(0, 18) || "新任务";
+      task.status = "running";
+      task.progress = 64;
+      renderTask(task.id);
+      $("#agent-input").value = "";
+      $("#agent-send").disabled = true;
+    };
+
+    document.body.dataset.edition = edition;
+    document.title = `${agentName} · Agent 对话`;
+    $("#agent-name").textContent = agentName;
+    $("#agent-role").textContent = profile.role;
+    $("#welcome-agent-name").textContent = agentName;
+    $("#welcome-role").textContent = profile.role;
+    $("#agent-description").textContent = profile.description;
+    $("#agent-portrait").src = profile.portrait;
+    $("#agent-portrait").alt = `${agentName}职业形象`;
+    $("#account-edition").textContent = edition === "personal" ? "个人版" : "企业版 · 百融智能";
+    $("#source-label").textContent = edition === "personal" ? "我的知识库 · 全域网站" : "企业知识库 · 全域网站";
+    $("#knowledge-source-label").textContent = edition === "personal" ? "引用我的知识库" : "引用企业知识库";
+    $("#agent-suggestions").innerHTML = profile.prompts.map((prompt) => `<button class="suggestion" type="button" data-suggestion="${prompt}">${prompt}</button>`).join("");
+    renderTaskHistory();
+
+    $("#agent-suggestions").addEventListener("click", (event) => {
+      const button = event.target.closest("[data-suggestion]");
+      if (!button) return;
+      $("#agent-input").value = button.dataset.suggestion;
+      $("#agent-send").disabled = false;
+      $("#agent-input").focus();
+    });
+    $("#agent-input").addEventListener("input", (event) => { $("#agent-send").disabled = !event.currentTarget.value.trim(); });
+    $("#agent-composer-form").addEventListener("submit", (event) => { event.preventDefault(); const prompt = $("#agent-input").value.trim(); if (prompt) startTask(prompt); });
+    $("#agent-input").addEventListener("keydown", (event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); $("#agent-composer-form").requestSubmit(); } });
+    $("#agent-new-task").addEventListener("click", renderNewTask);
+    $("#task-history").addEventListener("click", (event) => { const button = event.target.closest("[data-task-id]"); if (button) renderTask(button.dataset.taskId); });
+    $("#conversation-stream").addEventListener("click", (event) => {
+      const tool = event.target.closest("[data-tool-call]");
+      if (tool) { const detail = tool.parentElement.querySelector("[data-tool-detail]"); const open = tool.getAttribute("aria-expanded") !== "true"; tool.setAttribute("aria-expanded", String(open)); detail.hidden = !open; return; }
+      const fileButton = event.target.closest("[data-file-id]");
+      if (fileButton) { setFilePanelOpen(true); openFilePreview(fileButton.dataset.fileId); }
+    });
+    $("#task-file-list").addEventListener("click", (event) => {
+      const fileButton = event.target.closest("[data-file-id]");
+      if (fileButton) openFilePreview(fileButton.dataset.fileId);
+    });
+    $("#task-file-panel-close").addEventListener("click", () => setFilePanelOpen(false));
+    $("#task-file-panel-toggle").addEventListener("click", () => setFilePanelOpen($("#task-file-panel").getAttribute("aria-hidden") === "true"));
+    $("#agent-back").addEventListener("click", () => { if (window.history.length <= 1 && window.opener) window.close(); else window.location.href = `index.html?edition=${edition}&page=capabilities`; });
+    ArtifactResults.init();
+  </script>
+</body>
+</html>

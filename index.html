@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>百智 AI 工作台 · v14 轻团队 PC 预览</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --canvas-width: 1440;
+      --canvas-height: 900;
+      --preview-bg: #eef1f6;
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: var(--preview-bg);
+    }
+
+    body {
+      font-family: "MiSans", "HarmonyOS Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    .preview-stage {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      min-height: 320px;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 16% 8%, rgba(79, 111, 220, 0.08), transparent 32%),
+        #eef1f6;
+    }
+
+    .preview-canvas {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: calc(var(--canvas-width) * 1px);
+      height: calc(var(--canvas-height) * 1px);
+      overflow: hidden;
+      background: #fff;
+      box-shadow: 0 20px 70px rgba(28, 43, 68, 0.16);
+      transform: translate(-50%, -50%) scale(var(--preview-scale, 1));
+      transform-origin: center;
+    }
+
+    .preview-canvas iframe {
+      display: block;
+      width: 1440px;
+      height: 900px;
+      border: 0;
+      background: #f7f8fa;
+    }
+
+  </style>
+</head>
+<body>
+  <main class="preview-stage" id="preview-stage" aria-label="百智 AI 工作台固定 PC 比例预览">
+    <div class="preview-canvas" id="preview-canvas">
+      <iframe id="prototype-frame" title="百智 AI 工作台 v14 轻团队 Agent Workspace 原型" src="app.html"></iframe>
+    </div>
+  </main>
+
+  <script>
+    const CANVAS_WIDTH = 1440;
+    const CANVAS_HEIGHT = 900;
+    const SAFE_GAP = 12;
+    const stage = document.getElementById("preview-stage");
+    const canvas = document.getElementById("preview-canvas");
+    const frame = document.getElementById("prototype-frame");
+
+    const forwardedQuery = new URLSearchParams(window.location.search);
+    forwardedQuery.delete("embed");
+    const query = forwardedQuery.toString();
+    frame.src = `app.html${query ? `?${query}` : ""}`;
+
+    const fitCanvas = () => {
+      const width = Math.max(0, stage.clientWidth - SAFE_GAP * 2);
+      const height = Math.max(0, stage.clientHeight - SAFE_GAP * 2);
+      const scale = Math.min(width / CANVAS_WIDTH, height / CANVAS_HEIGHT, 1);
+      canvas.style.setProperty("--preview-scale", String(Math.max(scale, 0.1)));
+    };
+
+    new ResizeObserver(fitCanvas).observe(stage);
+    window.addEventListener("resize", fitCanvas, { passive: true });
+    fitCanvas();
+  </script>
+</body>
+</html>

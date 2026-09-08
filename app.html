@@ -3917,7 +3917,14 @@
       setXiaozhiExpanded(false);
       showToast(personal ? "已进入个人版" : "已进入企业版");
     };
-    $$('[data-edition-choice]').forEach((button) => button.addEventListener("click", () => setEdition(button.dataset.editionChoice)));
+    $$('[data-edition-choice]').forEach((button) => button.addEventListener("click", () => {
+      const edition = button.dataset.editionChoice;
+      setEdition(edition);
+      if (edition === "personal" && window.TeamWorkspace) {
+        const team = window.TeamWorkspace.getActiveTeam();
+        if (team) window.TeamWorkspace.setWorkspace("team", team.id);
+      }
+    }));
     ArtifactUI.init();
     KnowledgeFileActions.init();
     const previewParams = new URLSearchParams(window.location.search);

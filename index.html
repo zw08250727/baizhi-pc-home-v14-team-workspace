@@ -78,7 +78,6 @@
 
     const forwardedQuery = new URLSearchParams(window.location.search);
     forwardedQuery.delete("embed");
-    if (!forwardedQuery.has("workspace") && !forwardedQuery.has("edition")) forwardedQuery.set("workspace", "team");
     const query = forwardedQuery.toString();
     frame.src = `app.html${query ? `?${query}` : ""}`;
 

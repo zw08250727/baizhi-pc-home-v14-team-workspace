@@ -1174,11 +1174,6 @@
       document.body.dataset.workspace = "personal";
       renderWorkspaceSwitcher();
     } else if (params.get("edition") === "enterprise") document.body.dataset.workspace = "enterprise";
-    else {
-      // 默认进入预置团队，便于直接演示团队协作链路；可通过 edition=personal 切回个人空间。
-      const demoTeam = ensureDemoTeam();
-      setTeamWorkspace("team", demoTeam.id);
-    }
 
     if (teamFlow) {
       const stepMap = { create: 1, hardware: 2, checkout: 3, success: 4 };

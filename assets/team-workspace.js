@@ -1123,7 +1123,8 @@
       if (shareEnter) { closeTeamOverlays(); setTeamWorkspace("team", teamState.activeTeamId); }
     });
     document.addEventListener("change", (event) => handleSettingsInteraction(event));
-    el("#team-settings-content").addEventListener("click", handleSettingsInteraction);
+    // Navigation and panel content are siblings; delegate on their shared container.
+    el('[data-main-view="team-settings"]').addEventListener("click", handleSettingsInteraction);
     el("#team-invite-submit").addEventListener("click", submitInvite);
     el("#team-confirm-submit").addEventListener("click", (event) => { if (event.currentTarget.disabled) return; if (event.currentTarget.dataset.teamConfirmMode === "archive") archiveActiveTeam(); else leaveActiveTeam(); });
     el("#scrim").addEventListener("click", closeTeamOverlays);

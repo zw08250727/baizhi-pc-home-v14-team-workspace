@@ -22,8 +22,14 @@ body[data-workspace="team"] #history-tab-shared { display: inline-flex !importan
 body[data-workspace="team"] #history-shared-guide { display: none !important; }
 body[data-workspace="team"] .history-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 body[data-workspace="team"] .page-crumb { color: var(--team-ink); }
+/* Team home mirrors the enterprise recording home. Keep the shared meeting
+   controls visible even though team mode uses the personal edition flag for
+   the rest of the shell. */
 body[data-workspace="team"] .recording-home > .recording-commandbar,
-body[data-workspace="team"] .recording-home > .meeting-agent-grid { display: none !important; }
+body[data-workspace="team"] .recording-home > .meeting-agent-grid { display: grid !important; }
+body[data-workspace="team"] .recording-home > .recording-commandbar { display: flex !important; }
+body[data-workspace="team"] .meeting-view-tabs .edition-enterprise-only { display: inline-flex !important; }
+body[data-workspace="team"] .home-desktop-guide { display: none !important; }
 .team-workspace-dashboard { display: none !important; }
 body[data-workspace="team"] .team-workspace-dashboard { display: none !important; }
 .team-dashboard-card { min-height: 142px; padding: 16px; border: 1px solid #e5e8f0; border-radius: 12px; background: #fff; }
@@ -36,6 +42,12 @@ body[data-workspace="team"] .team-workspace-dashboard { display: none !important
 @media (max-width: 760px) { .team-workspace-dashboard { grid-template-columns: 1fr; } }
 .team-files-groups { display: none; }
 body[data-workspace="team"] .team-files-groups { display: block !important; }
+body[data-workspace="team"] #artifact-tree-personal,
+body[data-workspace="team"] #artifact-tree-enterprise { display: none !important; }
+body[data-edition="enterprise"] #artifact-tree-personal,
+body[data-edition="personal"] #artifact-tree-enterprise,
+body[data-workspace="personal"] #artifact-tree-personal { display: none !important; }
+body[data-workspace="team"] .team-file-group .team-agent-group { display: none !important; }
 .team-file-group { margin-bottom: 2px; }
 #personal-enterprise-card { display: none !important; }
 .team-file-group > .tree-folder-toggle { grid-template-columns: 12px 15px minmax(0, 1fr) auto; }
@@ -52,7 +64,7 @@ body[data-workspace="team"] .team-files-groups { display: block !important; }
 /* Team knowledge rows use the same file schema as personal and enterprise lists. */
 .knowledge-workspace .knowledge-table-head[data-schema="team"],
 .knowledge-workspace .knowledge-file-row[data-schema="file"].team-knowledge-row {
-  grid-template-columns: 34px minmax(240px,1.5fr) 74px 58px 70px 88px 84px 126px 58px;
+  grid-template-columns: 34px minmax(240px,1.5fr) 74px 58px 70px 88px 84px 126px 112px;
 }
 .team-knowledge-row .knowledge-file-name { min-width: 0; }
 .team-knowledge-row .knowledge-file-name strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: #3f4a5d; }
@@ -61,12 +73,93 @@ body[data-workspace="team"] .team-files-groups { display: block !important; }
 .team-knowledge-row .knowledge-row-action { display: flex; align-items: center; gap: 4px; }
 .team-knowledge-row .knowledge-row-action button { width: 24px; height: 24px; border: 0; border-radius: 6px; color: #71809a; background: transparent; cursor: pointer; }
 .team-knowledge-row .knowledge-row-action button:hover { color: var(--blue); background: #eef4ff; }
+.team-knowledge-row .knowledge-row-action .team-icon-action { width: 28px; height: 28px; }
+.team-knowledge-row .knowledge-row-action .team-icon-action .icon { width: 15px; height: 15px; }
+.team-knowledge-row .knowledge-row-action .team-icon-action.danger:hover { color: #d9535f; background: #fff0f1; }
+.knowledge-workspace .knowledge-table-head[data-schema="team"].team-shared-project-head,
+.knowledge-workspace .knowledge-file-row[data-schema="file"].team-shared-project-row {
+  grid-template-columns: 34px minmax(240px,1fr) 90px 90px 84px 126px 120px;
+  column-gap: 16px;
+  padding-inline: 22px;
+}
+.team-shared-project-row > span { min-width: 0; }
+.team-shared-project-row > span:nth-child(4),
+.team-shared-project-row > span:nth-child(6) { white-space: nowrap; }
+.team-shared-project-row .knowledge-row-action { gap: 6px; }
+body[data-workspace="team"] .team-shared-project-content { overflow-x: auto; }
+body[data-workspace="team"] .team-shared-project-content > .team-shared-project-head,
+body[data-workspace="team"] .team-shared-project-content > .team-shared-project-list { min-width: 924px; }
+.team-shared-project-row .knowledge-row-action .team-icon-action { width: 36px; height: 36px; flex: 0 0 36px; }
+.team-shared-project-row .knowledge-row-action .team-icon-action:focus-visible { outline: 2px solid var(--blue); }
+/* Keep the full project schema when legacy file tables hide columns on narrow screens. */
+@media (min-width: 761px) {
+  .knowledge-workspace .knowledge-table-head[data-schema="team"].team-shared-project-head > :nth-child(4),
+  .knowledge-workspace .knowledge-table-head[data-schema="team"].team-shared-project-head > :nth-child(6),
+  .knowledge-workspace .knowledge-file-row[data-schema="file"].team-shared-project-row > :nth-child(4),
+  .knowledge-workspace .knowledge-file-row[data-schema="file"].team-shared-project-row > :nth-child(6) { display: block; }
+}
+
+/* Shared tree rhythm: enterprise, personal and team folders use one geometry. */
+#knowledge-side-list .tree-folder-toggle { min-height: 31px; font-size: 11px; }
+#knowledge-side-list .tree-folder-toggle .tree-folder-icon { width: 15px; height: 15px; color: #6088db; }
+#knowledge-side-list .tree-folder-toggle .tree-chevron { width: 11px; height: 11px; }
+#knowledge-side-list .knowledge-leaf { min-height: 31px; gap: 6px; padding-left: 12px; font-size: 11px; grid-template-columns: 14px minmax(0, 1fr) auto; }
+#knowledge-side-list .knowledge-leaf .icon { width: 13px; height: 13px; }
+#knowledge-side-list .knowledge-tree-children { gap: 1px; padding-left: 10px; border-left: 1px solid #edf0f5; }
+#knowledge-side-list .knowledge-tree-node > .knowledge-tree-children > .knowledge-tree-node > .tree-folder-toggle { padding-left: 0; }
 .team-file-actions-menu { position: absolute; z-index: 30; top: 31px; right: 2px; display: none; width: 188px; padding: 5px; border: 1px solid #e2e6ec; border-radius: 9px; background: #fff; box-shadow: 0 12px 30px rgba(37, 47, 65, .16); }
 .team-file-actions-menu.show { display: grid; }
 .team-file-actions-menu button { display: flex; width: 100%; min-height: 32px; align-items: center; gap: 8px; padding: 0 8px; border: 0; border-radius: 6px; color: #4d586b; background: transparent; cursor: pointer; font-size: 10px; text-align: left; }
 .team-file-actions-menu button:hover { background: #f5f7fa; }
 .team-file-actions-menu button.danger { color: #b24b55; }
 .team-file-actions-menu .icon { width: 14px; height: 14px; }
+.team-folder-dialog { width: min(460px, calc(100vw - 32px)); max-height: calc(100vh - 32px); padding: 0; border: 1px solid var(--line); border-radius: 12px; color: var(--ink); background: #fff; box-shadow: 0 20px 56px rgba(25, 39, 59, .18); }
+.team-folder-dialog::backdrop { background: rgba(25, 39, 59, .3); }
+.team-folder-dialog .modal-body { padding: 20px 24px; }
+.team-folder-dialog #team-folder-dialog-hint { margin: 0 0 16px; color: var(--muted); font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.team-folder-dialog .field-input { height: 40px; font-size: 14px; }
+.team-folder-dialog .field-input[aria-invalid="true"] { border-color: #c74747; }
+.team-folder-error { min-height: 18px; margin: 6px 0 0; color: #c74747; font-size: 12px; line-height: 18px; }
+.team-folder-dialog .close-btn { width: 36px; height: 36px; }
+.team-folder-dialog button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.drawer-body .team-relay-hint { margin: 8px 0 18px; color: var(--muted); font-size: 12px; line-height: 1.65; }
+[data-team-continue-confirm]:disabled { opacity: .5; cursor: not-allowed; }
+.team-legacy-action {
+  position: fixed; top: 0; left: 0; width: 1px; height: 1px; margin: 0; padding: 0;
+  overflow: hidden; opacity: 0; pointer-events: auto;
+}
+.team-handoff-summary {
+  display: grid; gap: 8px; margin: 16px 0 18px; padding: 12px;
+  border: 1px solid #e2e6ee; border-radius: 10px; background: #f8f9fb;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.team-handoff-summary div { min-width: 0; }
+.team-handoff-summary span,
+.team-handoff-summary strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.team-handoff-summary span { margin-bottom: 4px; color: #8b95a5; font-size: 10px; }
+.team-handoff-summary strong { color: #344054; font-size: 12px; }
+.team-handoff-section { margin-top: 14px; }
+.team-handoff-section-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.team-handoff-section-head > span { color: #8994a4; font-size: 10px; }
+.team-handoff-hint { margin-bottom: 10px !important; color: #7b8697 !important; }
+.team-handoff-context-list { display: grid; gap: 6px; }
+.team-handoff-context-item {
+  display: grid; min-height: 48px; align-items: center; gap: 9px; padding: 8px 9px;
+  border: 1px solid #e4e8ef; border-radius: 8px; background: #fff;
+  cursor: pointer; grid-template-columns: 16px minmax(0, 1fr) auto;
+}
+.team-handoff-context-item:hover { border-color: #cbd8ef; background: #fafdff; }
+.team-handoff-context-item input { width: 15px; height: 15px; accent-color: var(--blue); }
+.team-handoff-context-item span { min-width: 0; }
+.team-handoff-context-item strong,
+.team-handoff-context-item small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.team-handoff-context-item strong { color: #3f4a5d; font-size: 11px; }
+.team-handoff-context-item small { margin-top: 2px; color: #9aa3b1; font-size: 9px; }
+.team-handoff-context-item em { color: #8793a5; font-size: 9px; font-style: normal; white-space: nowrap; }
+.team-handoff-privacy { margin-bottom: 0 !important; color: #8b95a5 !important; font-size: 11px !important; }
+@media (max-width: 540px) {
+  .team-handoff-summary { grid-template-columns: 1fr; }
+}
 
 .team-workspace-switcher { position: relative; display: none; min-width: 0; flex: 1; }
 body[data-edition="personal"] .team-workspace-switcher { display: block; }

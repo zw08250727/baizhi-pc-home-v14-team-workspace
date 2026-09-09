@@ -19,7 +19,7 @@ window.ArtifactResults = (() => {
     const cells = sales(selectedTask) ? salesCells : leadCells;
     q('#file-preview .preview-table').innerHTML = `<thead><tr>${cells[0].map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${cells.slice(1).map(row => `<tr>${row.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody>`;
     if (sales(selectedTask)) q('#file-preview p').textContent = '2026 年第 36 周 · 华东区域 · 数据快照 2026-09-06 09:42';
-    q('#file-preview').insertAdjacentHTML('beforeend', `<button id="artifact-save-result" class="artifact-save-entry" ${selectedTask?.status !== 'done' ? 'disabled' : ''}>保存至 Agent 产物</button>${selectedTask?.status !== 'done' ? '<p>任务完成后可保存正式产物。</p>' : ''}`);
+    q('#file-preview').insertAdjacentHTML('beforeend', `<button id="artifact-save-result" class="artifact-save-entry" ${selectedTask?.status !== 'done' ? 'disabled' : ''}>保存至应用数据</button>${selectedTask?.status !== 'done' ? '<p>任务完成后可保存正式产物。</p>' : ''}`);
     q('#artifact-save-result').onclick = openSave;
   }
   function openSave() {
@@ -30,7 +30,7 @@ window.ArtifactResults = (() => {
     q('#artifact-result-submit').hidden = false;
     q('#artifact-result-view').hidden = true;
     q('#artifact-result-space').disabled = false;
-    q('#artifact-result-path').textContent = `Agent 产物 / ${sales(selectedTask) ? '销售简报 Agent' : agentName} / ${files['lead-list'].name}`;
+    q('#artifact-result-path').textContent = `应用数据 / ${sales(selectedTask) ? '销售简报 Agent' : agentName} / ${files['lead-list'].name}`;
     q('#artifact-result-dialog').showModal();
   }
   function submit() {
@@ -51,7 +51,7 @@ window.ArtifactResults = (() => {
   function init() {
     note = files['verification-note'];
     taskGroups[0].tasks.unshift({id:'sales-week36',title:'第36周华东销售简报',status:'done',progress:100,prompt:'复用销售简报 Apps，更新第36周华东销售数据，生成 Excel 表格。',summary:'已更新 3 个区域的数据，生成独立 Excel 结果。'});
-    document.body.insertAdjacentHTML('beforeend', `<dialog id="artifact-result-dialog" class="artifact-dialog" aria-labelledby="artifact-result-title"><h2 id="artifact-result-title">保存至 Agent 产物</h2><label for="artifact-result-space">保存位置</label><select id="artifact-result-space"><option value="personal">我的文件</option>${edition === 'enterprise' ? '<option value="enterprise">企业文件</option>' : ''}</select><p id="artifact-result-path"></p><p>目录由系统自动创建，每次保存都是独立 Excel 文件，不覆盖历史产物。</p><p id="artifact-result-status" role="status"></p><p id="artifact-result-error" class="artifact-error" role="alert"></p><footer><button id="artifact-result-close">关闭</button><button id="artifact-result-submit" class="primary">保存</button><button id="artifact-result-view" class="primary" hidden>查看文件目录</button></footer></dialog>`);
+    document.body.insertAdjacentHTML('beforeend', `<dialog id="artifact-result-dialog" class="artifact-dialog" aria-labelledby="artifact-result-title"><h2 id="artifact-result-title">保存至应用数据</h2><label for="artifact-result-space">保存位置</label><select id="artifact-result-space"><option value="personal">我的文件</option>${edition === 'enterprise' ? '<option value="enterprise">企业文件</option>' : ''}</select><p id="artifact-result-path"></p><p>目录由系统自动创建，每次保存都是独立 Excel 文件，不覆盖历史产物。</p><p id="artifact-result-status" role="status"></p><p id="artifact-result-error" class="artifact-error" role="alert"></p><footer><button id="artifact-result-close">关闭</button><button id="artifact-result-submit" class="primary">保存</button><button id="artifact-result-view" class="primary" hidden>查看文件目录</button></footer></dialog>`);
     q('#artifact-result-close').onclick = () => q('#artifact-result-dialog').close();
     q('#artifact-result-submit').onclick = submit;
     renderTaskHistory();

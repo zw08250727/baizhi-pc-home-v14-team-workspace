@@ -31,10 +31,10 @@
   };
 
   const createSeedAgentArtifacts = () => ([
-    { agent: "销售简报 Agent", name: "第36周-华东销售数据.xlsx", type: "Excel", owner: "销售简报 Agent", updated: "今天 15:10" },
-    { agent: "销售简报 Agent", name: "华东销售简报.html", type: "HTML", owner: "销售简报 Agent", updated: "今天 15:18" },
-    { agent: "客户洞察 Agent", name: "重点客户名单.md", type: "Markdown", owner: "客户洞察 Agent", updated: "昨天 17:20" }
+    { agent: "销售简报 Agent", name: "第36周-华东销售数据.xlsx", type: "XLSX", owner: "销售简报 Agent", updated: "今天 15:10", cells: [["区域","成交额（元）","销售目标（元）"],["上海","1124870","1190000"],["杭州","867416","965000"],["南京","737049","785000"]] },
+    { agent: "销售简报 Agent", name: "第35周-华东销售数据.xlsx", type: "XLSX", owner: "销售简报 Agent", updated: "上周 15:10", cells: [["区域","成交额（元）","销售目标（元）"],["上海","1081606","1160000"],["杭州","834054","950000"],["南京","708701","770000"]] }
   ]);
+  const DEMO_SEED_AGENT_ARTIFACT_NAMES = new Set(["第36周-华东销售数据.xlsx", "第35周-华东销售数据.xlsx", "第34周-华东销售数据.xlsx", "第33周-华东销售数据.xlsx"]);
 
   const normalizeTeam = (team) => {
     if (!team) return team;
@@ -44,7 +44,20 @@
     if (!Array.isArray(team.hardwareOrders)) team.hardwareOrders = [];
     if (!Array.isArray(team.sharePackages)) team.sharePackages = [];
     if (!Array.isArray(team.artifacts)) team.artifacts = [];
+    if (!Array.isArray(team.fileFolders)) team.fileFolders = [];
     if (!Array.isArray(team.agentArtifacts)) team.agentArtifacts = team.id === "team-demo" ? createSeedAgentArtifacts() : [];
+    else {
+      const excelArtifacts = team.agentArtifacts.filter((item) => item && item.type === "XLSX");
+      const customArtifacts = excelArtifacts.filter((item) => !DEMO_SEED_AGENT_ARTIFACT_NAMES.has(item.name) || item.sourceSessionId);
+      const legacySeeds = excelArtifacts
+        .filter((item) => DEMO_SEED_AGENT_ARTIFACT_NAMES.has(item.name) && !item.sourceSessionId)
+        .sort((a, b) => ["第36周-华东销售数据.xlsx", "第35周-华东销售数据.xlsx", "第34周-华东销售数据.xlsx", "第33周-华东销售数据.xlsx"].indexOf(a.name) - ["第36周-华东销售数据.xlsx", "第35周-华东销售数据.xlsx", "第34周-华东销售数据.xlsx", "第33周-华东销售数据.xlsx"].indexOf(b.name))
+        .slice(0, 2);
+      team.agentArtifacts = legacySeeds.concat(customArtifacts);
+      team.agentArtifacts.forEach((item) => {
+        if (!Array.isArray(item.cells)) item.cells = [["区域", "成交额（元）", "销售目标（元）"], ["上海", "1124870", "1190000"], ["杭州", "867416", "965000"], ["南京", "737049", "785000"]];
+      });
+    }
     if (team.status === "active" && !team.sharePackages.length && !team.artifacts.length && !team.agentArtifacts.length) {
       team.sharePackages = [{
         id: "SHR-20260904-001",
@@ -108,10 +121,13 @@
   let activeSharePackageId = null;
 
   const persistTeamState = () => {
-    try { localStorage.setItem(TEAM_STORAGE_KEY, JSON.stringify(teamState)); } catch (error) {}
+    try { localStorage.setItem(TEAM_STORAGE_KEY, JSON.stringify(teamState)); return true; } catch (error) { return false; }
   };
 
   const getVisibleTeams = () => teamState.teams.filter((team) => !["archived", "left"].includes(team.status) && team.access !== "left");
+  const teamFilesRootName = (team) => team.filesRootName || `${team.name}的团队文件`;
+  // Existing demo projects retain their editable behavior until a permission is selected.
+  const relayCanEdit = (project) => project.relayPermission == null || project.relayPermission === "edit";
   const getActiveTeam = () => getVisibleTeams().find((team) => team.id === teamState.activeTeamId) || getVisibleTeams()[0] || null;
   const getOwnedTeams = () => getVisibleTeams().filter((team) => team.ownerId === "user-zhangwei" || team.role === "owner");
   const canCreateTeam = () => getOwnedTeams().length < 3;
@@ -137,6 +153,7 @@
     return {
       id,
       name: seed.name || "产品共创组",
+      fileFolders: [],
       role: seed.role || "owner",
       planId,
       cycle: seed.cycle || "year",
@@ -193,6 +210,7 @@
   };
 
   const closeTeamOverlays = () => {
+    if (typeof closeOverlays === "function") closeOverlays();
     els(".team-modal.show").forEach((modal) => modal.classList.remove("show"));
     const enterpriseApply = el("#enterprise-apply-modal");
     if (enterpriseApply) enterpriseApply.remove();
@@ -232,18 +250,111 @@
       </div>
     </aside>`;
 
+  // Team mode reuses the enterprise-style recording home in app.html.
+  // Keep this hook empty so no separate dashboard is injected above it.
   const teamHomeHTML = () => "";
+
+  const openTeamFolderDialog = (team, mode) => {
+    if (team.status === "readonly") { showTeamToast("团队当前为只读，无法修改目录"); return; }
+    let dialog = el("#team-folder-dialog");
+    if (!dialog) {
+      document.body.insertAdjacentHTML("beforeend", `<dialog id="team-folder-dialog" class="team-folder-dialog" aria-labelledby="team-folder-dialog-title" aria-describedby="team-folder-dialog-hint">
+        <form id="team-folder-form" novalidate>
+          <div class="modal-head"><h3 id="team-folder-dialog-title"></h3><button class="close-btn" type="button" data-folder-dialog-cancel aria-label="关闭目录弹窗"><svg class="icon"><use href="#ico-x"/></svg></button></div>
+          <div class="modal-body"><p id="team-folder-dialog-hint"></p><label class="field-label" for="team-folder-name">目录名称</label><input class="field-input" id="team-folder-name" maxlength="50" autocomplete="off" required aria-describedby="team-folder-error" /><p id="team-folder-error" class="team-folder-error" role="alert"></p></div>
+          <div class="modal-foot"><button class="secondary-btn" type="button" data-folder-dialog-cancel>取消</button><button class="primary-btn" id="team-folder-save" type="submit">创建</button></div>
+        </form>
+      </dialog>`);
+      dialog = el("#team-folder-dialog");
+      els("[data-folder-dialog-cancel]", dialog).forEach((button) => button.addEventListener("click", () => dialog.close()));
+      dialog.addEventListener("close", () => el(`[data-team-file-menu="${dialog.dataset.teamId}"]`)?.focus());
+      el("#team-folder-name").addEventListener("input", () => {
+        el("#team-folder-error").textContent = "";
+        el("#team-folder-name").removeAttribute("aria-invalid");
+      });
+      el("#team-folder-form").addEventListener("submit", (event) => {
+        event.preventDefault();
+        const targetTeam = getVisibleTeams().find((item) => item.id === dialog.dataset.teamId);
+        const input = el("#team-folder-name");
+        const name = input.value.trim();
+        const creating = dialog.dataset.mode === "child";
+        const reservedNames = ["团队共享", "团队共享项目", "团队产物", "应用数据", "Agent 产物", "我的文件", "企业文件"];
+        const siblingNames = creating
+          ? [teamFilesRootName(targetTeam || team), ...(targetTeam?.fileFolders || []).map((folder) => folder.name)]
+          : getVisibleTeams().filter((item) => item.id !== targetTeam?.id).map(teamFilesRootName).concat((targetTeam?.fileFolders || []).map((folder) => folder.name));
+        const fail = (message) => { el("#team-folder-error").textContent = message; input.setAttribute("aria-invalid", "true"); input.focus(); };
+        if (!targetTeam || targetTeam.status === "readonly") { fail("团队不可编辑，请关闭弹窗后重试。"); return; }
+        if (!name) { fail("请输入目录名称。"); return; }
+        if (name.length > 50) { fail("目录名称最多 50 个字符。"); return; }
+        if (/[\\/:*?"<>|\u0000-\u001f]/.test(name) || [".", ".."].includes(name)) { fail("目录名称不能包含斜杠、冒号或其他特殊路径字符。"); return; }
+        if ([...reservedNames, ...siblingNames, ...targetTeam.agentArtifacts.map((item) => item.name)].includes(name)) { fail("已有同名目录或文件，请换一个名称。"); return; }
+        const previousName = targetTeam.filesRootName;
+        const previousFolders = targetTeam.fileFolders.slice();
+        const expandedTeams = els('[data-team-tree-toggle][aria-expanded="true"]').map((button) => button.dataset.teamTreeToggle);
+        const folder = creating ? { id: `folder-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, name, createdAt: nowISO() } : null;
+        if (creating) targetTeam.fileFolders.push(folder);
+        else targetTeam.filesRootName = name;
+        try { localStorage.setItem(TEAM_STORAGE_KEY, JSON.stringify(teamState)); }
+        catch (error) { targetTeam.filesRootName = previousName; targetTeam.fileFolders = previousFolders; fail("保存失败，浏览器本地存储不可用，请重试。"); return; }
+        dialog.close();
+        renderTeamFilesTree();
+        if (creating) expandedTeams.push(targetTeam.id);
+        expandedTeams.forEach((id) => {
+          el(`[data-team-file-children="${id}"]`)?.classList.remove("hide");
+          el(`[data-team-tree-toggle="${id}"]`)?.setAttribute("aria-expanded", "true");
+        });
+        renderWorkspaceSwitcher();
+        const selected = creating ? el(`[data-team-custom-folder="${folder.id}"]`) : el(`[data-team-tree-toggle="${targetTeam.id}"]`);
+        openTeamKnowledgeFolder(targetTeam, name, selected);
+        selected?.focus();
+        showTeamToast(creating ? "下级目录已创建" : "目录已重命名");
+      });
+    }
+    if (typeof closeOverlays === "function") closeOverlays();
+    closeTeamOverlays();
+    dialog.dataset.teamId = team.id;
+    dialog.dataset.mode = mode;
+    el("#team-folder-dialog-title").textContent = mode === "child" ? "新建下级目录" : "重命名";
+    el("#team-folder-dialog-hint").textContent = mode === "child" ? `将在「${teamFilesRootName(team)}」下创建目录。` : "仅修改团队文件目录名称，不影响团队名称与目录内容。";
+    el("#team-folder-save").textContent = mode === "child" ? "创建" : "保存";
+    const input = el("#team-folder-name");
+    input.value = mode === "child" ? "" : teamFilesRootName(team);
+    input.placeholder = "输入目录名称";
+    input.removeAttribute("aria-invalid");
+    el("#team-folder-error").textContent = "";
+    dialog.showModal();
+    input.focus();
+    input.select();
+  };
 
   const teamFileTreeHTML = (team) => {
     const owner = isTeamOwner(team);
     const fileCount = team.sharePackages.length + team.artifacts.length + team.agentArtifacts.length;
-    const agentFolders = [...new Set(team.agentArtifacts.map((item) => item.agent))];
-    return `<div class="knowledge-tree-node team-only team-file-group" data-team-file-group="${escapeTeamHTML(team.id)}"><button class="tree-folder-toggle" data-team-tree-toggle="${escapeTeamHTML(team.id)}" data-knowledge-folder="${escapeTeamHTML(team.name)}的团队文件" aria-expanded="true"><svg class="icon tree-chevron"><use href="#ico-chevron"/></svg><svg class="icon tree-folder-icon"><use href="#ico-folder"/></svg><span class="tree-folder-name">${escapeTeamHTML(team.name)}的团队文件</span><span class="tree-count">${fileCount}</span></button><button class="tree-folder-more" type="button" data-team-file-menu="${escapeTeamHTML(team.id)}" aria-label="${escapeTeamHTML(team.name)}团队文件操作"><svg class="icon"><use href="#ico-more"/></svg></button><div class="team-file-actions-menu" data-team-file-actions="${escapeTeamHTML(team.id)}" role="menu"><button type="button" data-team-file-action="settings" data-team-id="${escapeTeamHTML(team.id)}"><svg class="icon"><use href="#ico-task"/></svg>团队设置</button><button type="button" data-team-file-action="invite" data-team-id="${escapeTeamHTML(team.id)}"><svg class="icon"><use href="#ico-plus"/></svg>邀请成员</button>${owner ? `<button type="button" data-team-file-action="archive" data-team-id="${escapeTeamHTML(team.id)}" class="danger"><svg class="icon"><use href="#ico-trash"/></svg>归档团队协作区</button>` : `<button type="button" data-team-file-action="leave" data-team-id="${escapeTeamHTML(team.id)}" class="danger"><svg class="icon"><use href="#ico-users"/></svg>离开团队协作区</button>`}</div><div class="knowledge-tree-children" data-team-file-children="${escapeTeamHTML(team.id)}"><button class="side-sub-item knowledge-leaf" type="button" data-team-folder="${escapeTeamHTML(team.id)}" data-knowledge-folder="团队共享"><svg class="icon"><use href="#ico-folder"/></svg><span class="tree-folder-name">团队共享</span><span class="tree-count">${team.sharePackages.length}</span></button><button class="side-sub-item knowledge-leaf" type="button" data-team-folder="${escapeTeamHTML(team.id)}" data-knowledge-folder="团队产物"><svg class="icon"><use href="#ico-folder"/></svg><span class="tree-folder-name">团队产物</span><span class="tree-count">${team.artifacts.length}</span></button><div class="knowledge-tree-node team-agent-group"><button class="tree-folder-toggle" type="button" data-team-agent-tree-toggle="${escapeTeamHTML(team.id)}" data-team-folder="${escapeTeamHTML(team.id)}" data-knowledge-folder="Agent 产物" aria-expanded="true"><svg class="icon tree-chevron"><use href="#ico-chevron"/></svg><svg class="icon tree-folder-icon"><use href="#ico-folder"/></svg><span class="tree-folder-name">Agent 产物</span><span class="tree-count team-system-label">系统</span></button><div class="knowledge-tree-children" data-team-agent-children="${escapeTeamHTML(team.id)}">${agentFolders.length ? agentFolders.map((agent) => { const count = team.agentArtifacts.filter((item) => item.agent === agent).length; return `<button class="side-sub-item knowledge-leaf" type="button" data-team-folder="${escapeTeamHTML(team.id)}" data-knowledge-folder="${escapeTeamHTML(agent)}"><svg class="icon"><use href="#ico-folder"/></svg><span class="tree-folder-name">${escapeTeamHTML(agent)}</span><span class="tree-count">${count}</span></button>`; }).join("") : `<button class="side-sub-item knowledge-leaf" type="button" data-team-folder="${escapeTeamHTML(team.id)}" data-knowledge-folder="Agent 产物"><svg class="icon"><use href="#ico-folder"/></svg><span class="tree-folder-name">暂无 Agent 产物</span><span class="tree-count">0</span></button>`}</div></div></div></div>`;
+    const dataFiles = team.agentArtifacts.filter((item) => item.type === "XLSX").slice(0, 2);
+    return `<div class="knowledge-tree-node team-only team-file-group" data-team-file-group="${escapeTeamHTML(team.id)}"><button class="tree-folder-toggle" data-team-tree-toggle="${escapeTeamHTML(team.id)}" data-knowledge-folder="${escapeTeamHTML(teamFilesRootName(team))}" aria-expanded="true"><svg class="icon tree-chevron"><use href="#ico-chevron"/></svg><svg class="icon tree-folder-icon"><use href="#ico-folder"/></svg><span class="tree-folder-name">${escapeTeamHTML(teamFilesRootName(team))}</span><span class="tree-count">${fileCount}</span></button><button class="tree-folder-more" type="button" data-team-file-menu="${escapeTeamHTML(team.id)}" aria-label="${escapeTeamHTML(team.name)}团队文件操作"><svg class="icon"><use href="#ico-more"/></svg></button><div class="team-file-actions-menu" data-team-file-actions="${escapeTeamHTML(team.id)}" role="menu"><button type="button" data-team-file-action="settings" data-team-id="${escapeTeamHTML(team.id)}"><svg class="icon"><use href="#ico-task"/></svg>团队设置</button><button type="button" data-team-file-action="invite" data-team-id="${escapeTeamHTML(team.id)}"><svg class="icon"><use href="#ico-plus"/></svg>邀请成员</button>${owner ? `<button type="button" data-team-file-action="archive" data-team-id="${escapeTeamHTML(team.id)}" class="danger"><svg class="icon"><use href="#ico-trash"/></svg>归档团队协作区</button>` : `<button type="button" data-team-file-action="leave" data-team-id="${escapeTeamHTML(team.id)}" class="danger"><svg class="icon"><use href="#ico-users"/></svg>离开团队协作区</button>`}</div><div class="knowledge-tree-children" data-team-file-children="${escapeTeamHTML(team.id)}"><button class="side-sub-item knowledge-leaf" type="button" data-team-folder="${escapeTeamHTML(team.id)}" data-knowledge-folder="团队共享项目"><svg class="icon"><use href="#ico-folder"/></svg><span class="tree-folder-name">团队共享项目</span><span class="tree-count">${team.sharePackages.length}</span></button><button class="side-sub-item knowledge-leaf" type="button" data-team-folder="${escapeTeamHTML(team.id)}" data-knowledge-folder="团队产物"><svg class="icon"><use href="#ico-folder"/></svg><span class="tree-folder-name">团队产物</span><span class="tree-count">${team.artifacts.length}</span></button><div class="knowledge-tree-node team-agent-group"><button class="tree-folder-toggle" type="button" data-team-agent-tree-toggle="${escapeTeamHTML(team.id)}" data-team-folder="${escapeTeamHTML(team.id)}" data-knowledge-folder="应用数据" aria-expanded="true"><svg class="icon tree-chevron"><use href="#ico-chevron"/></svg><svg class="icon tree-folder-icon"><use href="#ico-folder"/></svg><span class="tree-folder-name">应用数据</span><span class="tree-count team-system-label">系统</span></button><div class="knowledge-tree-children" data-team-agent-children="${escapeTeamHTML(team.id)}">${dataFiles.map((item) => `<button class="side-sub-item knowledge-leaf" type="button" data-team-folder="${escapeTeamHTML(team.id)}" data-knowledge-folder="${escapeTeamHTML(item.name)}"><svg class="icon"><use href="#ico-file"/></svg><span class="tree-folder-name">${escapeTeamHTML(item.name)}</span></button>`).join("")}</div></div></div></div>`;
   };
 
   const renderTeamFilesTree = () => {
     const groups = el("#team-files-groups");
-    if (groups) groups.innerHTML = getVisibleTeams().map(teamFileTreeHTML).join("");
+    if (groups) {
+      groups.innerHTML = getVisibleTeams().map(teamFileTreeHTML).join("") + [getActiveTeam()].filter(Boolean).map((team) => `<div class="knowledge-tree-node team-only team-app-data-group"><button class="tree-folder-toggle" type="button" data-team-agent-tree-toggle="${escapeTeamHTML(team.id)}" data-team-folder="${escapeTeamHTML(team.id)}" data-knowledge-folder="应用数据" aria-expanded="false"><svg class="icon tree-chevron"><use href="#ico-chevron"/></svg><svg class="icon tree-folder-icon"><use href="#ico-folder"/></svg><span class="tree-folder-name">应用数据</span><span class="tree-count team-system-label">系统</span></button><div class="knowledge-tree-children hide" data-team-agent-children-top="${escapeTeamHTML(team.id)}">${team.agentArtifacts.filter((item) => item.type === "XLSX").map((item) => `<button class="side-sub-item knowledge-leaf" type="button" data-team-folder="${escapeTeamHTML(team.id)}" data-knowledge-folder="${escapeTeamHTML(item.name)}"><svg class="icon"><use href="#ico-file"/></svg><span class="tree-folder-name">${escapeTeamHTML(item.name)}</span></button>`).join("")}</div></div>`).join("");
+      groups.querySelectorAll("[data-team-file-actions]").forEach((menu) => {
+        if (!menu.querySelector('[data-team-file-action="child"]')) menu.insertAdjacentHTML("afterbegin", `<button type="button" data-team-file-action="child" data-team-id="${escapeTeamHTML(menu.dataset.teamFileActions)}"><svg class="icon"><use href="#ico-plus"/></svg>新建下级目录</button><button type="button" data-team-file-action="rename" data-team-id="${escapeTeamHTML(menu.dataset.teamFileActions)}"><svg class="icon"><use href="#ico-file"/></svg>重命名</button>`);
+      });
+      getVisibleTeams().forEach((team) => {
+        const children = el(`[data-team-file-children="${team.id}"]`, groups);
+        children?.insertAdjacentHTML("beforeend", team.fileFolders.map((folder) => `<button class="side-sub-item knowledge-leaf" type="button" data-team-folder="${escapeTeamHTML(team.id)}" data-team-custom-folder="${escapeTeamHTML(folder.id)}" data-knowledge-folder="${escapeTeamHTML(folder.name)}" title="${escapeTeamHTML(folder.name)}"><svg class="icon"><use href="#ico-folder"/></svg><span class="tree-folder-name">${escapeTeamHTML(folder.name)}</span><span class="tree-count">0</span></button>`).join(""));
+      });
+      collapseKnowledgeTreeByDefault();
+    }
+  };
+
+  const collapseKnowledgeTreeByDefault = () => {
+    els("#knowledge-side-list .knowledge-tree-children").forEach((children) => {
+      children.classList.add("hide");
+      const toggle = children.parentElement?.querySelector(":scope > .tree-folder-toggle");
+      if (toggle) toggle.setAttribute("aria-expanded", "false");
+    });
   };
 
   const teamSettingsHTML = () => `
@@ -333,6 +444,8 @@
   const renderTeamHome = () => {
     const team = getActiveTeam();
     if (!team) return;
+    const teamMeetingTab = el('.meeting-view-tab[data-meeting-view="enterprise"]');
+    if (teamMeetingTab) teamMeetingTab.textContent = "团队会议";
     const latest = team.sharePackages[0];
     const sharedHistory = el('[data-team-shared-history="true"]');
     if (sharedHistory) {
@@ -344,10 +457,15 @@
   };
 
   const teamKnowledgeRows = (team, folderName) => {
-    const includeShared = !folderName || folderName.includes("团队文件") || folderName === "团队共享";
-    const includeArtifacts = !folderName || folderName.includes("团队文件") || folderName === "团队产物";
-    const includeAgentArtifacts = !folderName || folderName.includes("团队文件") || folderName === "Agent 产物" || team.agentArtifacts.some((item) => item.agent === folderName);
-    const selectedAgentArtifacts = includeAgentArtifacts ? team.agentArtifacts.filter((item) => !folderName || folderName.includes("团队文件") || folderName === "Agent 产物" || item.agent === folderName) : [];
+    if (team.fileFolders.some((folder) => folder.name === folderName)) return [];
+    const isRoot = !folderName || folderName === teamFilesRootName(team);
+    const includeShared = isRoot || folderName === "团队共享" || folderName === "团队共享项目";
+    const includeArtifacts = isRoot || folderName === "团队产物";
+    const includeAgentArtifacts = isRoot || ["应用数据", "Agent 产物"].includes(folderName) || team.agentArtifacts.some((item) => item.name === folderName);
+    const selectedAgentArtifacts = includeAgentArtifacts ? team.agentArtifacts.filter((item) => {
+      const inFolder = isRoot || ["应用数据", "Agent 产物"].includes(folderName) || item.name === folderName;
+      return inFolder && (!folderName || folderName !== "应用数据" || item.type === "XLSX");
+    }) : [];
     const sharedRows = includeShared ? team.sharePackages.map((item) => ({
       id: item.id,
       kind: "share",
@@ -359,7 +477,11 @@
       source: "团队共享",
       state: item.continuedBy ? "已接力" : "可接力",
       updated: item.createdAt,
-      icon: "ico-task"
+      icon: "ico-task",
+      version: item.version,
+      sharedBy: item.sharedBy || item.sourceOwner || "张伟",
+      relayMemberName: item.relayMemberName || "",
+      relayPermissionLabel: relayCanEdit(item) ? "可编辑" : "只读"
     })) : [];
     const artifactRows = includeArtifacts ? team.artifacts.map((item, index) => ({
       id: `${team.id}-artifact-${index}`,
@@ -398,8 +520,17 @@
     if (!list || !empty || !tableHead) return;
     const rows = teamKnowledgeRows(team, folderName);
     tableHead.dataset.schema = "team";
-    tableHead.innerHTML = ["", "名称", "大小", "数量", "类型", "来源", "状态", "更新时间", "操作"].map((label, index) => index === 0 ? '<span><input class="knowledge-check" id="knowledge-check-all" type="checkbox" aria-label="全选" /></span>' : `<span>${label}</span>`).join("");
-    list.innerHTML = rows.map((item) => `<div class="knowledge-file-row team-knowledge-row" data-schema="file" role="button" tabindex="0" data-team-knowledge-kind="${escapeTeamHTML(item.kind)}" data-team-knowledge-id="${escapeTeamHTML(item.id)}"><span><input class="knowledge-check" type="checkbox" aria-label="选择${escapeTeamHTML(item.name)}" /></span><span class="knowledge-file-name"><span class="knowledge-file-mark team"><svg class="icon"><use href="#${escapeTeamHTML(item.icon)}"/></svg></span><span><strong>${escapeTeamHTML(item.name)}</strong><small>${escapeTeamHTML(item.meta)}</small></span></span><span>${escapeTeamHTML(item.size)}</span><span>${escapeTeamHTML(item.count)}</span><span>${escapeTeamHTML(item.type)}</span><span>${escapeTeamHTML(item.source)}</span><span class="knowledge-state${item.state === "可接力" ? " pending" : ""}"><i></i>${escapeTeamHTML(item.state)}</span><span>${escapeTeamHTML(item.updated)}</span><span class="knowledge-row-action"><button type="button" data-team-knowledge-preview aria-label="打开${escapeTeamHTML(item.name)}"><svg class="icon"><use href="#ico-file"/></svg></button>${item.kind === "share" ? `<button type="button" data-team-continue="${escapeTeamHTML(item.id)}" aria-label="接力${escapeTeamHTML(item.name)}"><svg class="icon"><use href="#ico-agent"/></svg></button>` : ""}</span></div>`).join("");
+    const sharedProjectView = folderName === "团队共享项目" || folderName === "团队共享";
+    list.closest(".knowledge-content")?.classList.toggle("team-shared-project-content", sharedProjectView);
+    const labels = sharedProjectView ? ["", "项目名称", "共享人", "类型", "状态", "更新时间", "操作"] : ["", "名称", "大小", "数量", "类型", "来源", "状态", "更新时间", "操作"];
+    tableHead.classList.toggle("team-shared-project-head", sharedProjectView);
+    list.classList.toggle("team-shared-project-list", sharedProjectView);
+    tableHead.innerHTML = labels.map((label, index) => index === 0 ? '<span><input class="knowledge-check" id="knowledge-check-all" type="checkbox" aria-label="全选" /></span>' : `<span>${label}</span>`).join("");
+    list.innerHTML = rows.map((item) => {
+      const sharedActions = `<button class="team-icon-action danger" type="button" data-team-shared-delete aria-label="删除${escapeTeamHTML(item.name)}" title="删除"><svg class="icon"><use href="#ico-trash"/></svg></button><button class="team-icon-action" type="button" data-team-set-relay aria-label="设置${escapeTeamHTML(item.name)}接力人" title="设置接力人"><svg class="icon"><use href="#ico-users"/></svg></button><button class="team-icon-action" type="button" data-team-continue="${escapeTeamHTML(item.id)}" aria-label="接力${escapeTeamHTML(item.name)}" title="接力"><svg class="icon"><use href="#ico-agent"/></svg></button>`;
+      if (sharedProjectView && item.kind === "share") return `<div class="knowledge-file-row team-knowledge-row team-shared-project-row" data-schema="file" role="button" tabindex="0" data-team-knowledge-kind="share" data-team-knowledge-id="${escapeTeamHTML(item.id)}"><span><input class="knowledge-check" type="checkbox" aria-label="选择${escapeTeamHTML(item.name)}" /></span><span class="knowledge-file-name"><span class="knowledge-file-mark team"><svg class="icon"><use href="#${escapeTeamHTML(item.icon)}"/></svg></span><span><strong>${escapeTeamHTML(item.name)}</strong><small>v${escapeTeamHTML(item.version || 1)} · ${escapeTeamHTML(item.count || 0)} 项上下文${item.relayMemberName ? ` · 接力人：${escapeTeamHTML(item.relayMemberName)}（${item.relayPermissionLabel}）` : ""}</small></span></span><span>${escapeTeamHTML(item.sharedBy)}</span><span>${escapeTeamHTML(item.type)}</span><span class="knowledge-state${item.state === "可接力" ? " pending" : ""}"><i></i>${escapeTeamHTML(item.state)}</span><span>${escapeTeamHTML(item.updated)}</span><span class="knowledge-row-action">${sharedActions}</span></div>`;
+      return `<div class="knowledge-file-row team-knowledge-row" data-schema="file" role="button" tabindex="0" data-team-knowledge-kind="${escapeTeamHTML(item.kind)}" data-team-knowledge-id="${escapeTeamHTML(item.id)}"><span><input class="knowledge-check" type="checkbox" aria-label="选择${escapeTeamHTML(item.name)}" /></span><span class="knowledge-file-name"><span class="knowledge-file-mark team"><svg class="icon"><use href="#${escapeTeamHTML(item.icon)}"/></svg></span><span><strong>${escapeTeamHTML(item.name)}</strong><small>${escapeTeamHTML(item.meta)}</small></span></span><span>${escapeTeamHTML(item.size)}</span><span>${escapeTeamHTML(item.count)}</span><span>${escapeTeamHTML(item.type)}</span><span>${escapeTeamHTML(item.source)}</span><span class="knowledge-state${item.state === "可接力" ? " pending" : ""}"><i></i>${escapeTeamHTML(item.state)}</span><span>${escapeTeamHTML(item.updated)}</span><span class="knowledge-row-action">${item.kind === "agent" ? `<button class="team-icon-action" type="button" data-team-version-history aria-label="查看${escapeTeamHTML(item.name)}版本记录" title="版本记录"><svg class="icon"><use href="#ico-clock"/></svg></button>${item.type === "XLSX" ? `<button class="team-icon-action" type="button" data-team-knowledge-edit aria-label="编辑${escapeTeamHTML(item.name)}" title="编辑"><svg class="icon"><use href="#ico-edit"/></svg></button>` : ""}<button class="team-icon-action danger" type="button" data-team-knowledge-delete aria-label="删除${escapeTeamHTML(item.name)}" title="删除"><svg class="icon"><use href="#ico-trash"/></svg></button>` : item.kind === "share" ? `<button type="button" data-team-continue="${escapeTeamHTML(item.id)}" aria-label="接力${escapeTeamHTML(item.name)}"><svg class="icon"><use href="#ico-agent"/></svg></button>` : `<button type="button" data-team-knowledge-preview aria-label="打开${escapeTeamHTML(item.name)}"><svg class="icon"><use href="#ico-file"/></svg></button>`}</span></div>`;
+    }).join("");
     empty.hidden = rows.length > 0;
   };
 
@@ -432,16 +563,20 @@
 
   const openTeamKnowledgeFolder = (team, folderName, trigger) => {
     if (!team || typeof openKnowledgeFolder !== "function") return;
-    const title = folderName || `${team.name}的团队文件`;
+    const title = folderName === "Agent 产物" ? "应用数据" : folderName || teamFilesRootName(team);
     openKnowledgeFolder(title, trigger || el(`[data-team-tree-toggle="${team.id}"]`));
     const titleNode = el("#knowledge-folder-title");
     const crumb = el("#knowledge-breadcrumb-current");
     const meta = el("#knowledge-folder-meta");
     const primary = el("#knowledge-primary-label");
-    if (titleNode) titleNode.textContent = title === `${team.name}的团队文件` ? `${team.name}的团队文件` : title;
-    if (crumb) crumb.textContent = title === `${team.name}的团队文件` ? `${team.name}的团队文件` : title;
-    if (meta) meta.textContent = title === "团队共享" ? "成员显式发布的 Session 快照，可交给你的 Agent 继续" : title === "团队产物" ? "团队成员协作生成的 Excel、PPT、HTML、MD 等文件" : title === "Agent 产物" ? "团队 Agent 生成的结构化文件与网页产物" : title.includes("Agent") ? `由「${title}」生成并保存的团队 Agent 产物。` : "团队成员共享的 Session、资料与 Agent 产物";
-    if (primary) primary.textContent = title.includes("Agent") ? "上传Agent产物" : "上传团队文件";
+    if (titleNode) titleNode.textContent = title;
+    if (crumb) crumb.textContent = title;
+    if (meta) meta.textContent = title === "团队共享项目" ? "成员共享的项目快照，可设置接力人并交给 Agent 继续" : title === "团队共享" ? "成员显式发布的 Session 快照，可交给你的 Agent 继续" : title === "团队产物" ? "团队成员协作生成的 Excel、PPT、HTML、MD 等文件" : title === "应用数据" ? "团队 Agent 生成的结构化文件与网页产物" : title.includes("Agent") ? `由「${title}」生成并保存的团队 Agent 产物。` : "团队成员共享的 Session、资料与 Agent 产物";
+    if (primary) primary.textContent = title === "应用数据" ? "上传应用数据" : title.includes("Agent") ? "上传Agent产物" : "上传团队文件";
+    if (team.fileFolders.some((folder) => folder.name === title)) {
+      if (meta) meta.textContent = `${teamFilesRootName(team)}下的团队目录`;
+      if (primary) primary.textContent = "上传团队文件";
+    }
     renderTeamKnowledgeFiles(team, title);
     updateTeamKnowledgeStorage(team);
   };
@@ -460,7 +595,7 @@
       if (editionLabel) editionLabel.textContent = "团队版";
       if (typeof showMainView === "function") showMainView("home", { silent: true });
       const pageCrumb = el("#page-crumb");
-      if (pageCrumb) pageCrumb.textContent = `${team.name} · 团队文件`;
+      if (pageCrumb) pageCrumb.textContent = `${team.name} · 团队工作台`;
       renderTeamHome();
     } else {
       teamState.activeWorkspace = "personal";
@@ -473,17 +608,13 @@
       if (typeof showMainView === "function") showMainView("home", { silent: true });
       const pageCrumb = el("#page-crumb");
       if (pageCrumb) pageCrumb.textContent = "我的 AI 工作台";
+      const teamMeetingTab = el('.meeting-view-tab[data-meeting-view="enterprise"]');
+      if (teamMeetingTab) teamMeetingTab.textContent = "企业会议";
       restorePersonalKnowledgeStorage();
     }
     persistTeamState();
     renderWorkspaceSwitcher();
     renderTeamFilesTree();
-    if (workspace === "team" && !options.preserveView) {
-      window.setTimeout(() => {
-        const currentTeam = getActiveTeam();
-        if (currentTeam) openTeamKnowledgeFolder(currentTeam, `${currentTeam.name || "团队"}的团队文件`);
-      }, 0);
-    }
     const menu = el("#team-space-menu");
     const button = el("#team-workspace-switcher-button");
     if (menu) menu.classList.remove("show");
@@ -749,7 +880,7 @@
   };
 
   const renderOverviewPanel = (team) => `${teamSettingsHeader("团队概览", "查看成员与共享用量", '<button type="button" data-team-action="invite">邀请成员</button>')}
-    <div class="team-stat-grid"><article class="team-stat-card"><span>团队成员</span><strong>${getSeatUsage(team)} / ${getPlan(team).seats}</strong><small>包含待接受邀请</small></article><article class="team-stat-card"><span>共享 Session</span><strong>${team.sharePackages.length}</strong><small>团队资产快照</small></article><article class="team-stat-card"><span>团队产物</span><strong>${team.artifacts.length + team.agentArtifacts.length}</strong><small>Excel、PPT、HTML、MD、Agent 产物</small></article><article class="team-stat-card"><span>协作空间</span><strong>${escapeTeamHTML(team.name)}的团队文件</strong><small>共享包、团队产物与 Agent 产物</small></article></div>
+    <div class="team-stat-grid"><article class="team-stat-card"><span>团队成员</span><strong>${getSeatUsage(team)} / ${getPlan(team).seats}</strong><small>包含待接受邀请</small></article><article class="team-stat-card"><span>共享 Session</span><strong>${team.sharePackages.length}</strong><small>团队资产快照</small></article><article class="team-stat-card"><span>团队产物</span><strong>${team.artifacts.length + team.agentArtifacts.length}</strong><small>Excel、PPT、HTML、MD、Agent 产物</small></article><article class="team-stat-card"><span>协作空间</span><strong>${escapeTeamHTML(teamFilesRootName(team))}</strong><small>共享包、团队产物与 Agent 产物</small></article></div>
     <section class="team-section-card"><div class="team-section-card-head"><strong>本期共享用量</strong><span>每 31 天重置，不结转</span></div>${renderProgressRows(team)}</section>
     `;
 
@@ -830,7 +961,7 @@
       return;
     }
     body.innerHTML = `<div id="team-share-composer"><div class="team-share-banner"><svg class="icon"><use href="#ico-shield"/></svg><span><strong>私人内容不会自动共享。</strong><br/>发布后会生成不可变的团队资产快照；成员退出后仍保留，由团队管理员统一删除。</span></div><div class="team-share-section"><strong>发布到</strong><div class="team-share-target"><span class="team-space-menu-mark team">${escapeTeamHTML(team.name.slice(0,1))}</span><span><strong>${escapeTeamHTML(team.name)}</strong><small>${getSeatUsage(team)}/${getPlan(team).seats} 人 · 当前工作空间</small></span><em>可发布</em></div></div><div class="team-share-section"><strong>选择发布内容</strong><div class="team-share-checklist"><label class="team-share-check"><input type="checkbox" checked disabled/><span><strong>Session 目标与执行摘要</strong><small>让接收方 Agent 理解已经完成了什么</small></span><em>必选</em></label><label class="team-share-check"><input type="checkbox" checked data-share-item="引用资料 4 份"/><span><strong>本次引用资料</strong><small>只包含当前 Session 已授权的 4 份资料</small></span><em>4 份</em></label><label class="team-share-check"><input type="checkbox" checked data-share-item="竞品对比表.xlsx"/><span><strong>竞品对比表.xlsx</strong><small>Agent 生成的结构化分析产物</small></span><em>Excel</em></label><label class="team-share-check"><input type="checkbox" checked data-share-item="首页方案说明.md"/><span><strong>首页方案说明.md</strong><small>当前结论与后续待办</small></span><em>Markdown</em></label></div></div></div><div class="team-share-result" id="team-share-result"></div>`;
-    foot.innerHTML = '<button class="secondary-btn" type="button" data-team-close>取消</button><button class="primary-btn" type="button" id="team-share-publish">确认发布为团队资产</button>';
+    foot.innerHTML = '<button class="secondary-btn" type="button" data-team-close>取消</button><button class="primary-btn" type="button" id="team-share-publish">确认共享项目并发布</button>';
   };
 
   const openShareModal = () => {
@@ -846,7 +977,7 @@
     const selectedItems = ["Session 摘要"].concat(els("[data-share-item]:checked", el("#team-share-body")).map((input) => input.dataset.shareItem));
     const version = team.sharePackages.filter((item) => item.title === "三季度产品复盘与行动项").length + 1;
     const targetAgent = team.agents[0];
-    const packageItem = { id: `SHR-${Date.now()}`, version, title: "三季度产品复盘与行动项", sourceOwner: "张伟", sourceType: "个人 Session", createdAt: "今天 16:42", status: "published", items: selectedItems, targetAgentId: targetAgent.id, targetAgentName: targetAgent.name, continuedBy: null };
+    const packageItem = { id: `SHR-${Date.now()}`, version, title: "三季度产品复盘与行动项", sourceOwner: "张伟", sharedBy: "张伟", sourceType: "个人 Session", createdAt: "今天 16:42", status: "published", items: selectedItems, targetAgentId: targetAgent.id, targetAgentName: targetAgent.name, continuedBy: null };
     team.sharePackages.unshift(packageItem);
     selectedItems.filter((item) => /\.(xlsx|md|pptx|html)$/i.test(item)).forEach((name) => {
       if (!team.artifacts.some((artifact) => artifact.name === name)) team.artifacts.unshift({ name, type: name.split(".").pop().toUpperCase(), owner: "张伟", updated: "刚刚" });
@@ -856,11 +987,60 @@
     el("#team-share-composer").hidden = true;
     const result = el("#team-share-result");
     result.classList.add("show");
-    result.innerHTML = `<div><span class="team-success-mark">✓</span><h3>已发布到 ${escapeTeamHTML(team.name)}</h3><p>团队成员现在可以查看 v${version} 快照，并交给自己的 Agent 继续执行。</p><code>${escapeTeamHTML(packageItem.id)} · ${selectedItems.length} 项上下文</code></div>`;
+    result.innerHTML = `<div><span class="team-success-mark">✓</span><h3>已发布到 ${escapeTeamHTML(team.name)} · 团队共享项目</h3><p>该 Session 已作为共享项目进入团队共享项目目录，成员可查看并交给自己的 Agent 继续执行。</p><code>${escapeTeamHTML(packageItem.id)} · ${selectedItems.length} 项上下文</code></div>`;
     el("#team-share-foot").innerHTML = '<button class="secondary-btn" type="button" data-team-close>完成</button><button class="primary-btn" type="button" id="team-share-enter">进入团队查看</button>';
     renderTeamHome();
     renderTeamSettings("overview");
     showTeamToast("Session 已成为团队资产快照");
+  };
+
+  const openRelayHandoffReview = (packageId) => {
+    const team = getActiveTeam();
+    const sharePackage = team && team.sharePackages.find((item) => item.id === packageId);
+    if (!sharePackage) return;
+    if (team.status === "readonly") { showTeamToast("团队为只读状态，续费后才能继续执行"); return; }
+    const member = team.members.find((item) => item.id === (sharePackage.relayMemberId || "user-zhangwei") && item.status === "active");
+    const agent = team.agents.find((item) => item.id === sharePackage.targetAgentId) || team.agents[0];
+    if (!member || !agent) { openRelayPicker(packageId); return; }
+    const canEdit = relayCanEdit(sharePackage);
+    const contextItems = Array.isArray(sharePackage.items) && sharePackage.items.length ? sharePackage.items : ["Session 摘要"];
+    const contextHTML = contextItems.map((item, index) => {
+      const required = index === 0 || item === "Session 摘要";
+      return `<label class="team-handoff-context-item"><input type="checkbox" data-team-handoff-item="${escapeTeamHTML(item)}" ${required ? "checked disabled" : "checked"} /><span><strong>${escapeTeamHTML(item)}</strong><small>${required ? "接力必带上下文" : "发布时已授权，可选择带入"}</small></span><em>${required ? "必带" : "可选"}</em></label>`;
+    }).join("");
+    openTeamDrawer("接力确认", `<small>${escapeTeamHTML(team.name)} · 团队共享项目 · v${escapeTeamHTML(sharePackage.version)}</small><h4>把「${escapeTeamHTML(sharePackage.title)}」交给 Agent 继续</h4><div class="team-handoff-summary"><div><span>接力人</span><strong>${escapeTeamHTML(member.name)}</strong></div><div><span>目标 Agent</span><strong>${escapeTeamHTML(agent.name)}</strong></div><div><span>接力权限</span><strong>${canEdit ? "可编辑" : "只读"}</strong></div></div><div class="drawer-section team-handoff-section"><div class="team-handoff-section-head"><strong>带入 Agent 的上下文</strong><span>${contextItems.length} 项</span></div><p class="team-handoff-hint">确认后会打开当前团队的 Agent 工作区，并把已选内容作为接力上下文附在输入框上方。</p><div class="team-handoff-context-list">${contextHTML}</div></div><div class="drawer-section team-handoff-section"><strong>接力边界</strong><p>${canEdit ? "目标 Agent 可以继续处理项目，并在完成后新增或更新应用数据产物。" : "当前权限为只读，仅可查看已共享上下文；不能执行接力或写入新的应用数据。"}</p><p class="team-handoff-privacy">不会读取发布者或接力人的其他私人 Session；如需新增私人资料，仍需显式发布。</p></div>`, `<button class="secondary-btn" data-team-close>返回项目</button><button class="primary-btn" type="button" data-team-handoff-launch="${escapeTeamHTML(sharePackage.id)}" ${canEdit ? "" : 'disabled title="只读权限不能执行接力"'}>${canEdit ? "打开 Agent 工作区" : "只读 · 不可执行接力"}</button>`);
+  };
+
+  const openAgentWorkspaceWithRelay = (packageId) => {
+    const team = getActiveTeam();
+    const sharePackage = team && team.sharePackages.find((item) => item.id === packageId);
+    if (!team || !sharePackage || !relayCanEdit(sharePackage)) {
+      if (sharePackage && !relayCanEdit(sharePackage)) showTeamToast("当前接力权限为只读，不能打开执行工作区");
+      return;
+    }
+    const member = team.members.find((item) => item.id === (sharePackage.relayMemberId || "user-zhangwei") && item.status === "active");
+    const agent = team.agents.find((item) => item.id === sharePackage.targetAgentId) || team.agents[0];
+    if (!member || !agent) { showTeamToast("接力人或 Agent 不可用，请重新设置"); return; }
+    const selectedItems = els("[data-team-handoff-item]:checked", el("#drawer-body")).map((input) => input.dataset.teamHandoffItem).filter(Boolean);
+    const agentUrl = new URL("agent.html", window.location.href);
+    agentUrl.searchParams.set("agent", agent.name);
+    agentUrl.searchParams.set("edition", "personal");
+    agentUrl.searchParams.set("workspace", "team");
+    agentUrl.searchParams.set("teamName", team.name);
+    agentUrl.searchParams.set("relayProject", sharePackage.id);
+    agentUrl.searchParams.set("relayTitle", sharePackage.title);
+    agentUrl.searchParams.set("relayItems", JSON.stringify(selectedItems.length ? selectedItems : sharePackage.items || ["Session 摘要"]));
+    agentUrl.searchParams.set("relayPermission", "edit");
+    agentUrl.searchParams.set("relayMember", member.name);
+    const agentTab = window.open("about:blank", "_blank");
+    if (!agentTab) {
+      showTeamToast("浏览器阻止了新页签，请允许打开 Agent 工作区后重试");
+      return;
+    }
+    agentTab.opener = null;
+    agentTab.location.replace(agentUrl.href);
+    closeTeamOverlays();
+    showTeamToast(`已打开 ${agent.name}，接力上下文已带入输入框`);
   };
 
   const continueSharePackage = (packageId) => {
@@ -868,25 +1048,88 @@
     const sharePackage = team && team.sharePackages.find((item) => item.id === packageId);
     if (!sharePackage) return;
     if (team.status === "readonly") { showTeamToast("团队为只读状态，续费后才能继续执行"); return; }
-    openTeamDrawer("共享 Session · 可接力", `<small>${escapeTeamHTML(team.name)} · v${sharePackage.version}</small><h4>${escapeTeamHTML(sharePackage.title)}</h4><div class="drawer-section"><strong>来源与归属</strong><p>${escapeTeamHTML(sharePackage.sourceOwner)} 发布的${escapeTeamHTML(sharePackage.sourceType)}，发布后已成为团队资产。</p></div><div class="drawer-section"><strong>Agent 可用上下文</strong><p>${sharePackage.items.map(escapeTeamHTML).join("　·　")}</p></div><div class="drawer-section"><strong>隐私边界</strong><p>不会读取发布者或接力人的其他私人 Session；如需新增私人资料，必须先显式发布。</p></div>`, `<button class="secondary-btn" data-toast="共享包链接已复制">复制团队链接</button><button class="primary-btn" type="button" data-team-continue-confirm="${escapeTeamHTML(sharePackage.id)}">交给我的 Agent 继续</button>`);
+    const member = team.members.find((item) => item.id === (sharePackage.relayMemberId || "user-zhangwei") && item.status === "active");
+    const agent = team.agents.find((item) => item.id === sharePackage.targetAgentId) || team.agents[0];
+    if (!member || !agent) { openRelayPicker(packageId); return; }
+    const canEdit = relayCanEdit(sharePackage);
+    openTeamDrawer(canEdit ? "共享项目 · 接力" : "共享项目 · 只读", `<small>${escapeTeamHTML(team.name)} · v${sharePackage.version}</small><h4>${escapeTeamHTML(sharePackage.title)}</h4><div class="drawer-section"><strong>来源与归属</strong><p>${escapeTeamHTML(sharePackage.sourceOwner)} 发布的${escapeTeamHTML(sharePackage.sourceType)}，发布后已成为团队资产。</p></div><div class="drawer-section"><strong>Agent 可用上下文</strong><p>${sharePackage.items.map(escapeTeamHTML).join("　·　")}</p></div><div class="drawer-section"><strong>接力安排</strong><p>接力人：${escapeTeamHTML(member.name)}<br/>接力 Agent：${escapeTeamHTML(agent.name)}<br/>接力权限：${canEdit ? "可编辑" : "只读"}</p><p>${canEdit ? "下一步会先确认要带入 Agent 的上下文，再打开当前团队的 Agent 工作区。" : "仅可查看已共享的上下文与已有产物；不能执行接力、新增或修改产物。"}</p></div><div class="drawer-section"><strong>隐私边界</strong><p>不会读取发布者或接力人的其他私人 Session；如需新增私人资料，必须先显式发布。</p></div>`, `<button class="secondary-btn" data-team-close>取消</button><button class="primary-btn" type="button" data-team-handoff-review="${escapeTeamHTML(sharePackage.id)}" ${canEdit ? "" : 'disabled title="只读权限不能执行接力"'}>${canEdit ? "交给我的 Agent 继续" : "只读 · 不可执行接力"}</button><button class="team-legacy-action" type="button" data-team-continue-confirm="${escapeTeamHTML(sharePackage.id)}" aria-hidden="true" tabindex="-1" ${canEdit ? "" : "disabled"}>确认接力</button>`);
+  };
+
+  const openRelayPicker = (packageId) => {
+    const team = getActiveTeam();
+    const sharePackage = team?.sharePackages.find((item) => item.id === packageId);
+    if (!team || !sharePackage) return;
+    if (team.status === "readonly") { showTeamToast("团队当前为只读，无法设置接力人"); return; }
+    const members = team.members.filter((member) => member.status === "active");
+    const canEdit = relayCanEdit(sharePackage);
+    const memberOptions = members.map((member) => `<option value="${escapeTeamHTML(member.id)}" ${member.id === (sharePackage.relayMemberId || "user-zhangwei") ? "selected" : ""}>${escapeTeamHTML(member.name)}</option>`).join("");
+    const agentOptions = team.agents.map((agent) => `<option value="${escapeTeamHTML(agent.id)}" ${agent.id === sharePackage.targetAgentId ? "selected" : ""}>${escapeTeamHTML(agent.name)}</option>`).join("");
+    openTeamDrawer("设置接力人", `<small>${escapeTeamHTML(team.name)} · 团队共享项目</small><h4>${escapeTeamHTML(sharePackage.title)}</h4><div class="drawer-section"><p>指定负责接力的团队成员，以及继续处理项目的团队 Agent。保存后不会立即执行。</p><label class="field-label" for="team-relay-member">接力人</label><select class="field-input" id="team-relay-member">${memberOptions}</select><label class="field-label" for="team-relay-agent">接力 Agent</label><select class="field-input" id="team-relay-agent" aria-describedby="team-relay-agent-hint">${agentOptions}</select><p id="team-relay-agent-hint" class="team-relay-hint">接力人使用的团队 AI，将读取本项目已共享的上下文与产物继续处理。</p><label class="field-label" for="team-relay-permission">接力权限</label><select class="field-input" id="team-relay-permission" aria-describedby="team-relay-permission-hint"><option value="read" ${canEdit ? "" : "selected"}>只读</option><option value="edit" ${canEdit ? "selected" : ""}>可编辑</option></select><p id="team-relay-permission-hint" class="team-relay-hint">只读：查看共享上下文与已有产物，不执行写入型接力。<br/>可编辑：继续执行项目，新增或更新接力产物。<br/>权限作用于本次项目接力，不改变源文件的原有权限。</p><p id="team-relay-error" class="team-folder-error" role="alert"></p></div>`, `<button class="secondary-btn" data-team-close>取消</button><button class="primary-btn" type="button" data-team-relay-save="${escapeTeamHTML(packageId)}" ${!members.length || !team.agents.length ? "disabled" : ""}>保存设置</button>`);
+  };
+
+  const refreshSharedProjects = (team) => {
+    renderTeamFilesTree();
+    el(`[data-team-file-children="${team.id}"]`)?.classList.remove("hide");
+    el(`[data-team-tree-toggle="${team.id}"]`)?.setAttribute("aria-expanded", "true");
+    const trigger = el(`[data-team-folder="${team.id}"][data-knowledge-folder="团队共享项目"]`);
+    openTeamKnowledgeFolder(team, "团队共享项目", trigger);
+    el("#knowledge-selection-bar")?.classList.remove("show");
+  };
+
+  const saveRelaySettings = (packageId) => {
+    const team = getActiveTeam();
+    const project = team?.sharePackages.find((item) => item.id === packageId);
+    if (!project || team.status === "readonly") return;
+    const member = team.members.find((item) => item.id === el("#team-relay-member")?.value && item.status === "active");
+    const agent = team.agents.find((item) => item.id === el("#team-relay-agent")?.value);
+    const permission = el("#team-relay-permission")?.value;
+    if (!member || !agent) { el("#team-relay-error").textContent = "请选择有效的团队成员和 Agent。"; return; }
+    if (!["read", "edit"].includes(permission)) { el("#team-relay-error").textContent = "请选择接力权限。"; return; }
+    const previous = { ...project };
+    Object.assign(project, { relayMemberId: member.id, relayMemberName: member.name, targetAgentId: agent.id, targetAgentName: agent.name, relayPermission: permission });
+    if (!persistTeamState()) {
+      team.sharePackages[team.sharePackages.indexOf(project)] = previous;
+      el("#team-relay-error").textContent = "本地保存失败，请重试。";
+      return;
+    }
+    closeTeamOverlays();
+    refreshSharedProjects(team);
+    showTeamToast(`已设置 ${member.name} 接力，权限：${permission === "read" ? "只读" : "可编辑"}`);
   };
 
   const executeContinuation = (packageId) => {
     const team = getActiveTeam();
-    const sharePackage = team.sharePackages.find((item) => item.id === packageId);
-    if (!sharePackage) return;
+    const sharePackage = team?.sharePackages.find((item) => item.id === packageId);
+    if (!sharePackage || team.status === "readonly") return;
+    if (!relayCanEdit(sharePackage)) { showTeamToast("当前接力权限为只读，不能执行接力或写入产物"); return; }
     const plan = getPlan(team);
     const cost = 2400;
     if (team.usage.credits + cost > plan.credits) { showTeamToast("团队 Credits 已用尽，升级套餐后继续"); return; }
-    team.usage.credits += cost;
-    sharePackage.continuedBy = "张伟";
-    const outputName = "团队接力结论与下一步.html";
     const targetAgent = team.agents.find((agent) => agent.id === sharePackage.targetAgentId) || team.agents[0];
-    if (!team.agentArtifacts.some((artifact) => artifact.name === outputName)) team.agentArtifacts.unshift({ agent: targetAgent?.name || "接力 Agent", name: outputName, type: "HTML", owner: "团队 Agent", updated: "刚刚", sourceSessionId: sharePackage.id });
-    persistTeamState();
-    if (typeof closeOverlays === "function") closeOverlays();
+    const member = team.members.find((item) => item.id === (sharePackage.relayMemberId || "user-zhangwei") && item.status === "active");
+    if (!targetAgent || !member) { showTeamToast("接力人或 Agent 不可用，请重新设置"); return; }
+    const before = JSON.stringify({ usage: team.usage, sharePackages: team.sharePackages, agentArtifacts: team.agentArtifacts });
+    team.usage.credits += cost;
+    sharePackage.continuedBy = member.name;
+    sharePackage.continuedAt = nowISO();
+    sharePackage.status = "continued";
+    const timestamp = new Date().toLocaleString("sv-SE", { timeZone: "Asia/Shanghai" }).slice(0, 16);
+    let output = team.agentArtifacts.find((artifact) => artifact.sourceSessionId === packageId && artifact.type === "XLSX");
+    if (!output) {
+      output = { name: `${sharePackage.title}-接力记录.xlsx`, type: "XLSX", sourceSessionId: packageId, version: 0, history: [] };
+      team.agentArtifacts.unshift(output);
+    }
+    output.agent = targetAgent.name;
+    output.owner = member.name;
+    output.updated = timestamp;
+    output.version = (output.version || 0) + 1;
+    output.cells = [["事项", "负责人", "进度"], ["复核共享上下文", member.name, "已完成（模拟）"], ["整理项目结论", targetAgent.name, "已完成（模拟）"], ["确认下一步计划", member.name, "待跟进"]];
+    output.history = [...(output.history || []), { version: output.version, agent: targetAgent.name, time: timestamp, action: `${member.name} 发起项目接力，${output.version === 1 ? "生成" : "更新"}表格（模拟）` }];
+    if (!persistTeamState()) { Object.assign(team, JSON.parse(before)); showTeamToast("接力结果保存失败，请重试"); return; }
+    closeTeamOverlays();
     renderTeamHome();
-    showTeamToast("团队 Agent 已接力，结果已沉淀到团队文件");
+    refreshSharedProjects(team);
+    showTeamToast("模拟接力已完成，Excel 结果已保存到应用数据");
   };
 
   const openTeamConfirm = (mode) => {
@@ -1040,6 +1283,7 @@
         els(".team-file-actions-menu.show").forEach((menu) => menu.classList.remove("show"));
         if (fileAction.dataset.teamFileAction === "settings") openTeamSettings("overview");
         else if (fileAction.dataset.teamFileAction === "invite") openInviteModal();
+        else if (["child", "rename"].includes(fileAction.dataset.teamFileAction)) openTeamFolderDialog(team, fileAction.dataset.teamFileAction);
         else if (fileAction.dataset.teamFileAction === "archive") openTeamConfirm("archive");
         else if (fileAction.dataset.teamFileAction === "leave") openTeamConfirm("leave");
         return;
@@ -1057,7 +1301,7 @@
           document.body.dataset.workspace = "team";
           persistTeamState();
           renderWorkspaceSwitcher();
-          openTeamKnowledgeFolder(team, `${team.name}的团队文件`, teamToggle);
+          openTeamKnowledgeFolder(team, teamFilesRootName(team), teamToggle);
         }
         const children = el(`[data-team-file-children="${teamToggle.dataset.teamTreeToggle}"]`);
         const collapsed = children?.classList.toggle("hide");
@@ -1074,9 +1318,9 @@
           document.body.dataset.workspace = "team";
           persistTeamState();
           renderWorkspaceSwitcher();
-          openTeamKnowledgeFolder(team, "Agent 产物", teamAgentToggle);
+          openTeamKnowledgeFolder(team, "应用数据", teamAgentToggle);
         }
-        const children = el(`[data-team-agent-children="${teamAgentToggle.dataset.teamAgentTreeToggle}"]`);
+        const children = teamAgentToggle.closest(".team-app-data-group") ? el(`[data-team-agent-children-top="${teamAgentToggle.dataset.teamAgentTreeToggle}"]`) : el(`[data-team-agent-children="${teamAgentToggle.dataset.teamAgentTreeToggle}"]`);
         const collapsed = children?.classList.toggle("hide");
         teamAgentToggle.setAttribute("aria-expanded", String(!collapsed));
       }
@@ -1088,8 +1332,49 @@
         if (team) { teamState.activeTeamId = team.id; persistTeamState(); renderWorkspaceSwitcher(); }
         if (team) openTeamKnowledgeFolder(team, teamFolder.dataset.knowledgeFolder || "团队文件", teamFolder);
       }
+      const versionHistory = event.target.closest("[data-team-version-history]");
+      if (versionHistory) {
+        event.preventDefault();
+        event.stopPropagation();
+        const row = versionHistory.closest(".team-knowledge-row");
+        const team = getActiveTeam();
+      const item = team?.agentArtifacts.find((entry) => row && row.dataset.teamKnowledgeId === `${team.id}-agent-${entry.agent}-${entry.name}`);
+        if (item) {
+          const history = Array.isArray(item.history) && item.history.length ? item.history : [
+            { version: item.version || 1, agent: item.agent, time: item.updated, action: "生成并保存到应用数据" }
+          ];
+          const historyHTML = history.slice().reverse().map((entry) => `<div class="drawer-section"><strong>版本 v${escapeTeamHTML(entry.version)}</strong><p>${escapeTeamHTML(entry.agent || item.agent)} · ${escapeTeamHTML(entry.time || item.updated)} · ${escapeTeamHTML(entry.action || "更新文件")}</p></div>`).join("");
+          openTeamDrawer("版本记录", `<small>${escapeTeamHTML(team.name)} · ${escapeTeamHTML(item.name)}</small><h4>写入与修改历史</h4>${historyHTML}`, `<button class="secondary-btn" data-toast="版本链接已复制">复制版本链接</button>`);
+        }
+        return;
+      }
+      const editArtifact = event.target.closest("[data-team-knowledge-edit]");
+      if (editArtifact) {
+        event.preventDefault();
+        event.stopPropagation();
+        const row = editArtifact.closest(".team-knowledge-row");
+        const team = getActiveTeam();
+        const item = team?.agentArtifacts.find((entry) => row && row.dataset.teamKnowledgeId === `${team.id}-agent-${entry.agent}-${entry.name}`);
+        if (item && item.type === "XLSX" && typeof window.BaizhiOpenKnowledgePreview === "function") {
+          item.artifact = true;
+          item.space = "personal";
+          item.folder = "artifacts:personal";
+          window.BaizhiOpenKnowledgePreview(item);
+        }
+        return;
+      }
+      const deleteArtifact = event.target.closest("[data-team-knowledge-delete]");
+      if (deleteArtifact) {
+        event.preventDefault();
+        event.stopPropagation();
+        const row = deleteArtifact.closest(".team-knowledge-row");
+        const team = getActiveTeam();
+        const item = team?.agentArtifacts.find((entry) => row && row.dataset.teamKnowledgeId === `${team.id}-agent-${entry.agent}-${entry.name}`);
+        if (item) openTeamDrawer("删除应用数据", `<small>${escapeTeamHTML(team.name)} · 应用数据</small><h4>确认删除「${escapeTeamHTML(item.name)}」？</h4><div class="drawer-section"><p>删除后该 Excel 将从团队应用数据列表移除，其他成员也将无法继续引用。</p></div>`, `<button class="secondary-btn" data-team-close>取消</button><button class="danger-btn" data-team-knowledge-delete-confirm="${escapeTeamHTML(row.dataset.teamKnowledgeId)}">确认删除</button>`);
+        return;
+      }
       const teamKnowledgePreview = event.target.closest("[data-team-knowledge-preview], .team-knowledge-row");
-      if (teamKnowledgePreview && !event.target.closest(".knowledge-check")) {
+      if (teamKnowledgePreview && !event.target.closest(".knowledge-check, [data-team-shared-delete], [data-team-set-relay], [data-team-continue]")) {
         const row = teamKnowledgePreview.closest(".team-knowledge-row");
         const team = getActiveTeam();
         if (row && team) {
@@ -1098,7 +1383,12 @@
           const agentArtifact = team.agentArtifacts.find((item) => row.dataset.teamKnowledgeId === `${team.id}-agent-${item.agent}-${item.name}`);
           if (share) continueSharePackage(share.id);
           else if (artifact) openTeamDrawer("团队产物", `<small>${escapeTeamHTML(team.name)} · ${escapeTeamHTML(artifact.type)}</small><h4>${escapeTeamHTML(artifact.name)}</h4><div class="drawer-section"><strong>归属</strong><p>${escapeTeamHTML(artifact.owner)} 沉淀到团队文件，成员退出后仍由团队保留。</p></div><div class="drawer-section"><strong>可用方式</strong><p>可作为团队 Agent 的上下文继续引用，消耗团队 Credits。</p></div>`, `<button class="secondary-btn" data-toast="团队文件链接已复制">复制链接</button><button class="primary-btn" data-toast="已引用到团队 Agent">引用给 Agent</button>`);
-          else if (agentArtifact) openTeamDrawer("Agent 产物", `<small>${escapeTeamHTML(team.name)} · ${escapeTeamHTML(agentArtifact.agent)} · ${escapeTeamHTML(agentArtifact.type)}</small><h4>${escapeTeamHTML(agentArtifact.name)}</h4><div class="drawer-section"><strong>归属</strong><p>${escapeTeamHTML(agentArtifact.agent)} 直接生成并沉淀到团队空间，成员退出后仍由团队保留。</p></div><div class="drawer-section"><strong>可用方式</strong><p>可作为团队 Agent 的后续上下文继续引用，或在团队文件区直接预览。</p></div>`, `<button class="secondary-btn" data-toast="Agent 产物链接已复制">复制链接</button><button class="primary-btn" data-toast="已引用到团队 Agent">引用给 Agent</button>`);
+          else if (agentArtifact && typeof window.BaizhiOpenKnowledgePreview === "function") {
+            agentArtifact.artifact = true;
+            agentArtifact.space = "personal";
+            agentArtifact.folder = "artifacts:personal";
+            window.BaizhiOpenKnowledgePreview(agentArtifact);
+          }
         }
         return;
       }
@@ -1113,8 +1403,60 @@
       }
       const close = event.target.closest("[data-team-close]");
       if (close) closeTeamOverlays();
+      const deleteConfirm = event.target.closest("[data-team-knowledge-delete-confirm]");
+      if (deleteConfirm) {
+        const team = getActiveTeam();
+        const id = deleteConfirm.dataset.teamKnowledgeDeleteConfirm;
+        if (team) {
+          team.agentArtifacts = team.agentArtifacts.filter((entry) => `${team.id}-agent-${entry.agent}-${entry.name}` !== id);
+          persistTeamState();
+          renderTeamFilesTree();
+          renderTeamKnowledgeFiles(team, activeKnowledgeFolder || "应用数据");
+          closeTeamOverlays();
+          showTeamToast("应用数据已删除");
+        }
+        return;
+      }
+      const sharedDelete = event.target.closest("[data-team-shared-delete]");
+      if (sharedDelete) {
+        event.preventDefault();
+        event.stopPropagation();
+        const row = sharedDelete.closest(".team-shared-project-row");
+        const team = getActiveTeam();
+        if (team?.status === "readonly") { showTeamToast("团队当前为只读，无法删除共享项目"); return; }
+        const project = team?.sharePackages.find((item) => item.id === row?.dataset.teamKnowledgeId);
+        if (project) openTeamDrawer("删除共享项目", `<small>${escapeTeamHTML(team.name)} · 团队共享项目</small><h4>确认删除「${escapeTeamHTML(project.title)}」？</h4><div class="drawer-section"><p>删除后团队成员将无法继续查看或接力该项目。</p></div>`, `<button class="secondary-btn" data-team-close>取消</button><button class="danger-btn" data-team-shared-delete-confirm="${escapeTeamHTML(project.id)}">确认删除</button>`);
+        return;
+      }
+      const sharedDeleteConfirm = event.target.closest("[data-team-shared-delete-confirm]");
+      if (sharedDeleteConfirm) {
+        const team = getActiveTeam();
+        if (team && team.status !== "readonly") {
+          const previous = team.sharePackages;
+          team.sharePackages = team.sharePackages.filter((item) => item.id !== sharedDeleteConfirm.dataset.teamSharedDeleteConfirm);
+          if (!persistTeamState()) { team.sharePackages = previous; showTeamToast("删除保存失败，请重试"); return; }
+          closeTeamOverlays();
+          refreshSharedProjects(team);
+          showTeamToast("共享项目已删除");
+        }
+        return;
+      }
+      const relayPicker = event.target.closest("[data-team-set-relay]");
+      if (relayPicker) {
+        event.preventDefault();
+        event.stopPropagation();
+        const row = relayPicker.closest(".team-shared-project-row");
+        if (row) openRelayPicker(row.dataset.teamKnowledgeId);
+        return;
+      }
+      const relaySave = event.target.closest("[data-team-relay-save]");
+      if (relaySave) { saveRelaySettings(relaySave.dataset.teamRelaySave); return; }
       const continueButton = event.target.closest("[data-team-continue]");
-      if (continueButton) continueSharePackage(continueButton.dataset.teamContinue);
+      if (continueButton) { continueSharePackage(continueButton.dataset.teamContinue); return; }
+      const handoffReview = event.target.closest("[data-team-handoff-review]");
+      if (handoffReview) { openRelayHandoffReview(handoffReview.dataset.teamHandoffReview); return; }
+      const handoffLaunch = event.target.closest("[data-team-handoff-launch]");
+      if (handoffLaunch) { openAgentWorkspaceWithRelay(handoffLaunch.dataset.teamHandoffLaunch); return; }
       const continueConfirm = event.target.closest("[data-team-continue-confirm]");
       if (continueConfirm) executeContinuation(continueConfirm.dataset.teamContinueConfirm);
       const sharePublish = event.target.closest("#team-share-publish");
@@ -1123,6 +1465,9 @@
       if (shareEnter) { closeTeamOverlays(); setTeamWorkspace("team", teamState.activeTeamId); }
     });
     document.addEventListener("change", (event) => handleSettingsInteraction(event));
+    el("#knowledge-file-list").addEventListener("keydown", (event) => {
+      if (event.target.matches(".team-knowledge-row") && ["Enter", " "].includes(event.key)) { event.preventDefault(); event.target.click(); }
+    });
     // Navigation and panel content are siblings; delegate on their shared container.
     el('[data-main-view="team-settings"]').addEventListener("click", handleSettingsInteraction);
     el("#team-invite-submit").addEventListener("click", submitInvite);
@@ -1205,16 +1550,18 @@
 
   window.TeamWorkspace = {
     getActiveTeam,
+    persist: persistTeamState,
     openKnowledgeFolder: openTeamKnowledgeFolder,
     renderKnowledgeFiles: () => {
       const team = getActiveTeam();
-      if (team) renderTeamKnowledgeFiles(team, activeKnowledgeFolder || `${team.name}的团队文件`);
+      if (team) renderTeamKnowledgeFiles(team, activeKnowledgeFolder || teamFilesRootName(team));
     },
     renderFilesTree: renderTeamFilesTree,
     setWorkspace: setTeamWorkspace
   };
 
   injectTeamUI();
+  collapseKnowledgeTreeByDefault();
   renderPersonalFileCount();
   renderWorkspaceSwitcher();
   bindGlobalEvents();

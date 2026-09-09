@@ -1240,8 +1240,16 @@
       background: transparent;
       box-shadow: none;
     }
-    .meeting-view-tabs { gap: 6px; }
+    /* Keep the three meeting views on a shared grid so the labels line up even
+       when one tab is active (its border must not change the tab width). */
+    .meeting-view-tabs {
+      display: grid;
+      width: max-content;
+      grid-template-columns: repeat(3, 76px);
+      gap: 6px;
+    }
     .meeting-view-tab {
+      width: 76px;
       height: 34px;
       padding: 0 13px;
       border-radius: 999px;
@@ -1255,6 +1263,9 @@
       color: #172033;
       background: #f4f5f8;
       box-shadow: none;
+    }
+    body[data-edition="personal"]:not([data-workspace="team"]) .meeting-view-tabs {
+      grid-template-columns: repeat(2, 76px);
     }
     .meeting-viewbar .recording-command-actions {
       display: flex;
@@ -2097,7 +2108,7 @@
     .personal-edition-brand strong { margin-top: 1px; color: #303a4a; font-size: 12px; line-height: 17px; }
     body[data-edition="personal"] .history-tabs { grid-template-columns: repeat(2,minmax(0,1fr)); }
     body[data-edition="personal"] .meeting-view-tabs { padding-right: 2px; }
-    body[data-edition="personal"] [data-view="enterprise"] { display: none !important; }
+    body[data-edition="personal"]:not([data-workspace="team"]) [data-view="enterprise"] { display: none !important; }
     body[data-edition="personal"] [data-skill-name="企业搜索"],
     body[data-edition="personal"] [data-connector-id="company-kb"] { display: none !important; }
     body[data-edition="personal"] .home-desktop-guide-copy > strong { max-width: 238px; }
@@ -2561,6 +2572,7 @@
     <symbol id="ico-upload" viewBox="0 0 24 24"><path d="M12 16V4m0 0-4 4m4-4 4 4M5 14v5h14v-5"/></symbol>
     <symbol id="ico-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
     <symbol id="ico-trash" viewBox="0 0 24 24"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13M10 10v6M14 10v6"/></symbol>
+    <symbol id="ico-edit" viewBox="0 0 24 24"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-4-2L4 18v2Z"/><path d="m13.5 8.5 2 2"/></symbol>
     <symbol id="ico-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="4.5" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="4.5" cy="18" r="1" fill="currentColor" stroke="none"/></symbol>
     <symbol id="ico-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></symbol>
     <symbol id="ico-x" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
@@ -3149,7 +3161,7 @@
     };
     const moveKnowledgeToRecycle = (item, originalIndex) => {
       if (!KnowledgeFileActions.allowed(item).includes("delete")) return;
-      const storedItem = { ...item, folder: item.folder || activeKnowledgeFolder, space: item.space || knowledgeSpaceForFolder(activeKnowledgeFolder), originalIndex, originalLocation: item.artifact ? `${item.space === "personal" ? "我的文件" : "企业文件"}/Agent 产物/${item.agent}` : activeKnowledgeFolder };
+      const storedItem = { ...item, folder: item.folder || activeKnowledgeFolder, space: item.space || knowledgeSpaceForFolder(activeKnowledgeFolder), originalIndex, originalLocation: item.artifact ? `${item.space === "personal" ? "我的文件" : "企业文件"}/应用数据/${item.agent}` : activeKnowledgeFolder };
       assetStore.upsertKnowledge(storedItem);
       assetStore.deleteKnowledge(storedItem.id);
       knowledgeCatalog.file.splice(originalIndex, 1);
@@ -3856,7 +3868,9 @@
       $("#thought-workspace").hidden = !thoughtMode;
       $("#business-dashboard").hidden = !panoramaMode;
       $("#meeting-filter-empty").hidden = true;
-      if (enterpriseMode) $("#meeting-view-description").textContent = panoramaMode ? "查看后端定时生成的企业经营数据文件" : "查看企业成员共享的会议内容";
+      if (enterpriseMode) $("#meeting-view-description").textContent = panoramaMode
+        ? "查看后端定时生成的企业经营数据文件"
+        : (document.body.dataset.workspace === "team" ? "查看团队成员共享的会议内容" : "查看企业成员共享的会议内容");
       setPanoramaPreviewOpen(false);
       if (thoughtMode) renderThoughtFiles(); else if (!panoramaMode) filterMeetings();
     };
@@ -3869,7 +3883,9 @@
       const thoughtMode = activeMeetingView === "thought";
       if (activeMeetingView === "enterprise") activeEnterpriseAsset = "meeting";
       $$('[data-meeting-view]').forEach((item) => { const active = item === button; item.classList.toggle("active", active); if (active) item.setAttribute("aria-current", "page"); else item.removeAttribute("aria-current"); });
-      const content = meetingViewContent[activeMeetingView];
+      const content = activeMeetingView === "enterprise" && document.body.dataset.workspace === "team"
+        ? ["团队会议", "查看团队成员共享的会议内容"]
+        : meetingViewContent[activeMeetingView];
       $("#recent-meeting-title").textContent = content[0];
       $("#meeting-view-description").textContent = content[1];
       $("#meeting-name-column").textContent = "文件名";
@@ -3925,6 +3941,7 @@
         if (team) window.TeamWorkspace.setWorkspace("team", team.id);
       }
     }));
+    window.BaizhiOpenKnowledgePreview = openKnowledgePreview;
     ArtifactUI.init();
     KnowledgeFileActions.init();
     const previewParams = new URLSearchParams(window.location.search);

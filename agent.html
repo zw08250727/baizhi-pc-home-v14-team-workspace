@@ -124,6 +124,18 @@
     .agent-composer-wrap:focus-within { border-color: #aebff1; box-shadow: 0 0 0 3px rgba(53, 105, 226, .07), 0 9px 26px rgba(36, 52, 83, .07); }
     .agent-input { display: block; width: 100%; min-height: 54px; max-height: 132px; resize: none; padding: 4px 5px; border: 0; outline: none; color: #293448; background: transparent; font-size: 12px; line-height: 20px; }
     .agent-input::placeholder { color: #abb2bf; }
+    .relay-context-banner { width: min(850px, calc(100% - 50px)); margin: 0 auto 10px; padding: 11px 12px 10px; border: 1px solid #d8e2f5; border-radius: 11px; background: #f7faff; }
+    .relay-context-head { display: flex; align-items: flex-start; gap: 9px; }
+    .relay-context-mark { display: inline-grid; width: 24px; height: 24px; flex: 0 0 auto; place-items: center; border-radius: 7px; color: #2f67be; background: #e9f1ff; font-size: 15px; font-weight: 700; line-height: 1; }
+    .relay-context-copy { min-width: 0; flex: 1; }
+    .relay-context-copy strong, .relay-context-copy small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .relay-context-copy strong { color: #34445e; font-size: 10px; line-height: 16px; }
+    .relay-context-copy small { margin-top: 1px; color: #73839c; font-size: 8px; line-height: 14px; }
+    .relay-context-dismiss { display: inline-grid; width: 28px; height: 28px; flex: 0 0 auto; place-items: center; border: 0; border-radius: 7px; color: #8190a6; background: transparent; cursor: pointer; }
+    .relay-context-dismiss:hover { color: #3d5f94; background: #eaf2ff; }
+    .relay-context-dismiss .icon { width: 13px; height: 13px; }
+    .relay-context-items { display: flex; flex-wrap: wrap; gap: 5px; margin: 9px 0 0 33px; }
+    .relay-context-item { display: inline-flex; min-height: 22px; align-items: center; padding: 0 7px; border: 1px solid #dce5f3; border-radius: 6px; color: #536681; background: #fff; font-size: 8px; line-height: 20px; }
     .composer-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 4px; }
     .composer-tools { display: flex; min-width: 0; align-items: center; gap: 6px; }
     .composer-tool { display: inline-flex; height: 27px; align-items: center; gap: 5px; padding: 0 7px; border: 0; border-radius: 7px; color: #748095; background: transparent; cursor: pointer; font-size: 8px; }
@@ -176,6 +188,7 @@
       .agent-app { min-width: 1000px; }
       .agent-suggestions { grid-template-columns: 1fr; }
       .suggestion { min-height: 44px; }
+      .relay-context-banner { width: min(850px, calc(100% - 32px)); }
     }
   </style>
   <link rel="stylesheet" href="assets/agent-artifacts.css" />
@@ -221,6 +234,10 @@
         <section class="conversation-view" id="conversation-view" hidden aria-label="Agent 会话"><div class="conversation-stream" id="conversation-stream"></div></section>
       </div>
 
+      <section class="relay-context-banner" id="relay-context-banner" hidden aria-label="已接入的共享项目上下文">
+        <div class="relay-context-head"><span class="relay-context-mark" aria-hidden="true">↗</span><div class="relay-context-copy"><strong id="relay-context-title">已接入共享项目</strong><small id="relay-context-meta"></small></div><button class="relay-context-dismiss" id="relay-context-dismiss" type="button" aria-label="移除接力上下文" title="移除接力上下文"><svg class="icon"><use href="#ico-close"/></svg></button></div>
+        <div class="relay-context-items" id="relay-context-items"></div>
+      </section>
       <form class="agent-composer-wrap" id="agent-composer-form">
         <textarea class="agent-input" id="agent-input" rows="2" aria-label="告诉 Agent 你的任务" placeholder="告诉 Agent 你想完成什么…"></textarea>
         <div class="composer-footer"><div class="composer-tools"><button class="composer-tool" type="button"><svg class="icon"><use href="#ico-plus"/></svg>添加附件</button><button class="composer-tool" type="button"><svg class="icon"><use href="#ico-book"/></svg><span id="knowledge-source-label">引用企业知识库</span></button><button class="composer-tool" type="button"><svg class="icon"><use href="#ico-globe"/></svg>全域网站</button></div><button class="agent-send" id="agent-send" type="submit" disabled aria-label="发送任务"><svg class="icon"><use href="#ico-send"/></svg></button></div>
@@ -246,6 +263,19 @@
     const agentName = Object.prototype.hasOwnProperty.call(agentProfiles, requestedAgent) ? requestedAgent : "通用智能体";
     const profile = agentProfiles[agentName];
     const edition = params.get("edition") === "personal" ? "personal" : "enterprise";
+    const isTeamWorkspace = params.get("workspace") === "team";
+    const relayProjectId = params.get("relayProject") || "";
+    const relayTitle = params.get("relayTitle") || "";
+    const relayTeamName = params.get("teamName") || "";
+    const relayMember = params.get("relayMember") || "";
+    const relayPermission = params.get("relayPermission") === "read" ? "只读" : "可编辑";
+    let relayItems = [];
+    try {
+      const parsedRelayItems = JSON.parse(params.get("relayItems") || "[]");
+      relayItems = Array.isArray(parsedRelayItems) ? parsedRelayItems.filter((item) => typeof item === "string" && item.trim()) : [];
+    } catch (error) {
+      relayItems = [];
+    }
     const $ = (selector) => document.querySelector(selector);
     const resolveAgent = (name) => agentProfiles[name] || agentProfiles["通用智能体"];
     const escapeHTML = (value) => String(value).replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[character]));
@@ -331,6 +361,27 @@
       $("#agent-input").value = "";
       $("#agent-send").disabled = true;
     };
+    const applyRelayContext = () => {
+      const banner = $("#relay-context-banner");
+      if (!banner || !relayProjectId || !relayTitle) return;
+      const items = relayItems.length ? relayItems : ["Session 摘要"];
+      $("#relay-context-title").textContent = `已接入共享项目：${relayTitle}`;
+      $("#relay-context-meta").textContent = `${relayTeamName || "当前团队"} · ${agentName} · ${relayPermission} · 接力人：${relayMember || "当前成员"}`;
+      $("#relay-context-items").innerHTML = items.map((item) => `<span class="relay-context-item">${escapeHTML(item)}</span>`).join("");
+      banner.hidden = false;
+      $("#agent-input").value = `继续处理共享项目「${relayTitle}」，请基于已接入的上下文完成下一步。`;
+      $("#agent-send").disabled = false;
+      $("#task-title").textContent = "接力任务";
+      document.title = `${agentName} · 接力任务`;
+    };
+    const clearRelayContext = () => {
+      const banner = $("#relay-context-banner");
+      if (banner) banner.hidden = true;
+      if ($("#agent-input").value.includes("继续处理共享项目")) {
+        $("#agent-input").value = "";
+        $("#agent-send").disabled = true;
+      }
+    };
 
     document.body.dataset.edition = edition;
     document.title = `${agentName} · Agent 对话`;
@@ -341,11 +392,12 @@
     $("#agent-description").textContent = profile.description;
     $("#agent-portrait").src = profile.portrait;
     $("#agent-portrait").alt = `${agentName}职业形象`;
-    $("#account-edition").textContent = edition === "personal" ? "个人版" : "企业版 · 百融智能";
-    $("#source-label").textContent = edition === "personal" ? "我的知识库 · 全域网站" : "企业知识库 · 全域网站";
-    $("#knowledge-source-label").textContent = edition === "personal" ? "引用我的知识库" : "引用企业知识库";
+    $("#account-edition").textContent = isTeamWorkspace ? `团队版 · ${relayTeamName || "当前团队"}` : edition === "personal" ? "个人版" : "企业版 · 百融智能";
+    $("#source-label").textContent = isTeamWorkspace ? "团队知识库 · 全域网站" : edition === "personal" ? "我的知识库 · 全域网站" : "企业知识库 · 全域网站";
+    $("#knowledge-source-label").textContent = isTeamWorkspace ? "引用团队知识库" : edition === "personal" ? "引用我的知识库" : "引用企业知识库";
     $("#agent-suggestions").innerHTML = profile.prompts.map((prompt) => `<button class="suggestion" type="button" data-suggestion="${prompt}">${prompt}</button>`).join("");
     renderTaskHistory();
+    applyRelayContext();
 
     $("#agent-suggestions").addEventListener("click", (event) => {
       const button = event.target.closest("[data-suggestion]");
@@ -355,6 +407,7 @@
       $("#agent-input").focus();
     });
     $("#agent-input").addEventListener("input", (event) => { $("#agent-send").disabled = !event.currentTarget.value.trim(); });
+    $("#relay-context-dismiss").addEventListener("click", clearRelayContext);
     $("#agent-composer-form").addEventListener("submit", (event) => { event.preventDefault(); const prompt = $("#agent-input").value.trim(); if (prompt) startTask(prompt); });
     $("#agent-input").addEventListener("keydown", (event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); $("#agent-composer-form").requestSubmit(); } });
     $("#agent-new-task").addEventListener("click", renderNewTask);

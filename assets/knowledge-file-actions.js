@@ -7,12 +7,14 @@ window.KnowledgeFileActions = (() => {
   const folders = new Map();
   function allowed(item) {
     if (!item || item.system || item.preview === 'folder' || (item.space === 'enterprise' && document.body.dataset.edition === 'personal')) return [];
+    if (item.artifact && item.type === 'XLSX') return ['edit','delete'];
     if (item.artifact) return item.space === 'personal' && document.body.dataset.edition !== 'personal' ? ['copy','delete'] : ['delete'];
     return item.space === 'enterprise' ? ['move'] : ['copy','move','delete'];
   }
   function button(action, bulk = false, artifact = false) {
-    const label = action === 'copy' ? artifact ? '复制到企业' : '复制' : action === 'move' ? '移动' : '删除';
-    return `<button type="button" ${bulk ? 'data-knowledge-bulk' : 'data-knowledge-row-action'}="${action}" title="${label}" aria-label="${label}" ${action === 'delete' ? 'class="file-trash-button"' : ''}>${action === 'delete' ? '<svg class="icon" aria-hidden="true"><use href="#ico-trash"/></svg>' : label}</button>`;
+    const label = action === 'copy' ? artifact ? '复制到企业' : '复制' : action === 'move' ? '移动' : action === 'edit' ? '编辑' : '删除';
+    const icon = action === 'delete' ? '<svg class="icon" aria-hidden="true"><use href="#ico-trash"/></svg>' : action === 'edit' ? '<svg class="icon" aria-hidden="true"><use href="#ico-task"/></svg>' : label;
+    return `<button type="button" ${bulk ? 'data-knowledge-bulk' : 'data-knowledge-row-action'}="${action}" title="${label}" aria-label="${label}" ${action === 'delete' ? 'class="file-trash-button"' : ''}>${icon}</button>`;
   }
   function actions(item) { return allowed(item).map(a=>button(a,false,item.artifact)).join(''); }
   const selected = () => [...document.querySelectorAll('#knowledge-file-list .knowledge-check:checked')].map(x=>knowledgeCatalog.file[Number(x.closest('[data-knowledge-index]').dataset.knowledgeIndex)]).filter(Boolean);
@@ -24,6 +26,11 @@ window.KnowledgeFileActions = (() => {
   }
   function execute(action, items) {
     if (!items.length || !items.every(item=>knowledgeCatalog.file.includes(item) && allowed(item).includes(action))) { showToast('当前文件不支持此操作'); return; }
+    if (action === 'edit') {
+      const item = items[0];
+      if (item?.artifact && item.type === 'XLSX' && typeof window.BaizhiOpenKnowledgePreview === 'function') window.BaizhiOpenKnowledgePreview(item);
+      return;
+    }
     if (action === 'delete') {
       openDeleteConfirm({title:`确认删除 ${items.length} 个文件？`,description:'删除后移入回收站，30 天内可恢复。',onConfirm:()=>{
         items.forEach(item=>{if(allowed(item).includes('delete')) moveKnowledgeToRecycle(item,knowledgeCatalog.file.indexOf(item));});
@@ -33,8 +40,8 @@ window.KnowledgeFileActions = (() => {
     const artifacts = items.every(x=>x.artifact);
     if (items.some(x=>x.artifact) && !artifacts) { showToast('请分别操作普通文件与 Agent 产物');return; }
     transfer={action,items,artifacts};
-    q('#file-transfer-title').textContent = artifacts ? '复制到企业 Agent 产物' : action === 'copy' ? '复制文件' : '移动文件';
-    q('#file-transfer-copy').textContent = artifacts ? `将 ${items.length} 个文件复制到企业文件 / Agent 产物 / 对应 Agent。保留个人原文件，复制当前已保存的内容，不重新读取 Apps；同名自动编号。` : `已选择 ${items.length} 个文件。请选择${items[0].space === 'enterprise' ? '企业文件' : '我的文件'}下的目标目录。${action === 'copy' ? '原文件保留，同名自动编号。' : '移动后原目录不再展示该文件。'}`;
+    q('#file-transfer-title').textContent = artifacts ? '复制到企业应用数据' : action === 'copy' ? '复制文件' : '移动文件';
+    q('#file-transfer-copy').textContent = artifacts ? `将 ${items.length} 个文件复制到企业文件 / 应用数据 / 对应 Agent。保留个人原文件，复制当前已保存的内容，不重新读取 Apps；同名自动编号。` : `已选择 ${items.length} 个文件。请选择${items[0].space === 'enterprise' ? '企业文件' : '我的文件'}下的目标目录。${action === 'copy' ? '原文件保留，同名自动编号。' : '移动后原目录不再展示该文件。'}`;
     q('#file-transfer-target-wrap').hidden = artifacts;
     q('#file-transfer-target').innerHTML = [...folders].filter(([key,space])=>space===items[0].space && items.every(x=>x.folder!==key)).map(([key])=>`<option value="${esc(key)}">${esc(key)}</option>`).join('');
     q('#file-transfer-submit').disabled = !artifacts && !q('#file-transfer-target').options.length;

@@ -27,7 +27,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>百智 AI 工作台 · v14 轻团队 Agent Workspace</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232e63b6'/%3E%3Cpath d='M10 8h7.5a5 5 0 0 1 0 10H10V8Zm0 10h9a4 4 0 0 1 0 8h-9v-8Z' fill='white'/%3E%3C/svg%3E" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23171717'/%3E%3Cpath d='M10 8h7.5a5 5 0 0 1 0 10H10V8Zm0 10h9a4 4 0 0 1 0 8h-9v-8Z' fill='white'/%3E%3C/svg%3E" />
   <style>
     :root {
       --blue: #165dff;
@@ -2501,6 +2501,7 @@
   </style>
   <link rel="stylesheet" href="assets/team-workspace.css" />
   <link rel="stylesheet" href="assets/agent-artifacts.css" />
+  <link rel="stylesheet" href="assets/monochrome-theme.css" />
   <script src="assets/agent-artifacts-model.js"></script>
   <script src="assets/agent-artifacts-ui.js"></script>
   <script src="assets/knowledge-file-actions.js"></script>
@@ -3187,7 +3188,10 @@
         return;
       }
       $("#knowledge-table-head").dataset.schema = activeKnowledgeSchema;
-      $("#knowledge-table-head").innerHTML = ArtifactUI.labels.map((label, index) => index === 0 ? `<span><input class="knowledge-check" id="knowledge-check-all" type="checkbox" aria-label="全选" /></span>` : `<span>${knowledgeEscape(label)}</span>`).join("");
+      const knowledgeLabels = ArtifactUI.labelsForCurrentView ? ArtifactUI.labelsForCurrentView() : ArtifactUI.labels;
+      $("#knowledge-table-head").classList.toggle("artifact-app-data-head", Boolean(ArtifactUI.isArtifact?.()));
+      $("#knowledge-file-list").classList.toggle("artifact-app-data-list", Boolean(ArtifactUI.isArtifact?.()));
+      $("#knowledge-table-head").innerHTML = knowledgeLabels.map((label, index) => index === 0 ? `<span><input class="knowledge-check" id="knowledge-check-all" type="checkbox" aria-label="全选" /></span>` : `<span>${knowledgeEscape(label)}</span>`).join("");
       const keyword = $("#knowledge-search-input").value.trim().toLowerCase();
       const source = $("#knowledge-source-filter").value;
       const type = $("#knowledge-type-filter").value;

@@ -1,0 +1,528 @@
+/* Monochrome wireframe theme
+   Shared by the workspace and Agent pages. The original interaction states
+   stay intact; only the visual language is reduced to black, white and gray. */
+:root {
+  --blue: #171717 !important;
+  --blue-5: rgba(0, 0, 0, .045) !important;
+  --blue-8: rgba(0, 0, 0, .08) !important;
+  --violet: #353535 !important;
+  --green: #4e4e4e !important;
+  --orange: #686868 !important;
+  --ink: #171717 !important;
+  --sub: #505050 !important;
+  --muted: #858585 !important;
+  --line: #d7d7d7 !important;
+  --soft-line: rgba(0, 0, 0, .10) !important;
+  --bg: #f5f5f5 !important;
+  --team: #2a2a2a !important;
+  --team-dark: #111 !important;
+  --team-soft: #f0f0f0 !important;
+  --team-line: #c9c9c9 !important;
+  --team-ink: #1d1d1d !important;
+  --team-success: #555 !important;
+  --team-warning: #777 !important;
+  --team-danger: #333 !important;
+  --blue-strong: #111 !important;
+  --soft-blue: #f1f1f1 !important;
+  --soft-violet: #f1f1f1 !important;
+  --success: #555 !important;
+  --canvas: #f5f5f5 !important;
+}
+
+html,
+body {
+  color: #171717 !important;
+  background: #f5f5f5 !important;
+}
+
+/* Icons inherit the monochrome ink, including icons nested in colored legacy
+   components. Explicit white overrides below keep primary controls legible. */
+.icon,
+.nav-icon,
+.tree-folder-icon,
+.knowledge-file-leaf .icon,
+.knowledge-leaf .icon {
+  color: #303030 !important;
+  filter: grayscale(1);
+}
+
+/* Remove colorful gradients and heavy elevation from the wireframe surface. */
+button,
+a,
+input,
+select,
+textarea {
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+[class*="card"],
+[class*="panel"],
+[class*="dialog"],
+[class*="drawer"],
+[class*="popover"] {
+  border-color: #d4d4d4 !important;
+  box-shadow: none !important;
+}
+
+.nav-item:hover,
+.nav-item.active,
+.side-group-head.active,
+.side-sub-item:hover,
+.side-sub-item.active,
+.tree-folder-toggle:hover,
+.tree-folder-toggle.active,
+.knowledge-leaf:hover,
+.knowledge-leaf.active,
+.recycle-bin-entry:hover,
+.recycle-bin-entry.active,
+.history-tab:hover,
+.history-tab.active {
+  color: #111 !important;
+  background: #eeeeee !important;
+}
+
+.space-switcher:hover,
+.space-switcher[aria-expanded="true"],
+.space-menu-item:hover,
+.knowledge-file-leaf:hover,
+.knowledge-file-leaf.active,
+.recording-recycle-entry:hover,
+.recording-recycle-entry.active,
+.directory-category:hover,
+.directory-category.active,
+.directory-use:hover,
+.directory-use.secondary:hover,
+.tool-btn:hover,
+.tool-btn.selected,
+.tool-menu-item:hover,
+.tool-menu-item.active,
+.os-btn:hover,
+.os-btn.selected {
+  color: #111 !important;
+  border-color: #bdbdbd !important;
+  background: #eeeeee !important;
+}
+
+/* Core actions are black/charcoal rather than blue or purple. */
+.primary-btn,
+.knowledge-action.primary,
+.knowledge-preview-actions .primary,
+.send-btn,
+.capture-action.primary,
+.directory-btn.primary,
+.recording-controls .pause,
+.recording-assistant-send,
+#download-top,
+.enterprise-apply-submit,
+.edition-choice-action,
+.team-plan-enterprise button,
+.team-settings-title button,
+.team-shared-card button,
+.team-agent-card.selected button,
+.personal-team-cta .create,
+.agent-send {
+  border-color: #171717 !important;
+  color: #fff !important;
+  background: #171717 !important;
+}
+
+.points-entry,
+.points-entry:hover,
+.points-entry:focus-visible {
+  border-color: #bdbdbd !important;
+  color: #333 !important;
+  background: #fff !important;
+}
+
+.points-entry .points-action-icon {
+  color: #fff !important;
+  background: #353535 !important;
+}
+
+.toast,
+.invite-email-cta,
+.invite-success-mark {
+  color: #222 !important;
+  border-color: #bdbdbd !important;
+  background: #f0f0f0 !important;
+}
+
+.directory-eyebrow,
+.directory-back:hover,
+.capability-primary-tab:hover,
+.connector-add-card:hover,
+.connector-add-icon,
+.connector-config-tab.active,
+.knowledge-breadcrumb button:hover,
+.knowledge-selection-bar strong,
+.note-detail-side-head button,
+.team-row-action,
+.team-insight-strip em,
+.enterprise-invite-action,
+.recording-meta .live {
+  color: #222 !important;
+}
+
+.directory-tab.active::after,
+.capability-primary-tab.active::after,
+.connector-config-tab.active::after,
+.note-detail-tab.active::after {
+  background: #333 !important;
+}
+
+.directory-btn:hover,
+.directory-use:hover,
+.recording-name button:hover,
+.recording-header-actions button:hover,
+.recording-controls button:hover,
+.recording-assistant-suggestions button:hover,
+.recycle-actions button:hover,
+.knowledge-row-action button:hover,
+.top-actions .app-download-btn:hover,
+.top-actions .app-download-btn:focus-visible,
+.top-actions .bell-btn:hover,
+.top-actions .bell-btn:focus-visible {
+  color: #222 !important;
+  border-color: #aaa !important;
+  background: #eeeeee !important;
+}
+
+.recording-chat-row.user span,
+.recording-assistant-send,
+.transcript-cursor {
+  color: #fff !important;
+  background: #222 !important;
+}
+
+.file-trash-button:hover,
+.team-file-actions-menu button.danger {
+  color: #333 !important;
+  background: #f0f0f0 !important;
+}
+
+.primary-btn:hover,
+.knowledge-action.primary:hover,
+.knowledge-preview-actions .primary:hover,
+.send-btn:hover,
+.capture-action.primary:hover,
+.directory-btn.primary:hover,
+.recording-controls .pause:hover,
+.recording-assistant-send:hover,
+#download-top:hover,
+.enterprise-apply-submit:hover,
+.edition-choice-action:hover,
+.team-plan-enterprise button:hover,
+.team-settings-title button:hover,
+.team-shared-card button:hover,
+.team-agent-card.selected button:hover,
+.personal-team-cta .create:hover,
+.agent-send:hover {
+  background: #383838 !important;
+}
+
+.primary-btn .icon,
+.send-btn .icon,
+.capture-action.primary .icon,
+.directory-btn.primary .icon,
+.recording-controls .pause .icon,
+.recording-assistant-send .icon,
+#download-top .icon,
+.enterprise-apply-submit .icon,
+.edition-choice-action .icon,
+.team-plan-enterprise button .icon,
+.team-settings-title button .icon,
+.team-shared-card button .icon,
+.team-agent-card.selected button .icon,
+.personal-team-cta .create .icon,
+.agent-send .icon {
+  color: #fff !important;
+}
+
+.secondary-btn,
+.directory-use,
+.team-home-actions .secondary,
+.team-plan-option,
+.team-agent-card button,
+.team-settings-title-actions button + button,
+.team-payment-method,
+.new-task-button,
+.source-pill,
+.file-panel-toggle,
+.preview-back {
+  border-color: #bdbdbd !important;
+  color: #303030 !important;
+  background: #fff !important;
+}
+
+.secondary-btn:hover,
+.directory-use:hover,
+.team-plan-option:hover,
+.team-agent-card button:hover,
+.new-task-button:hover,
+.source-pill:hover,
+.file-panel-toggle:hover,
+.preview-back:hover {
+  border-color: #555 !important;
+  color: #111 !important;
+  background: #f1f1f1 !important;
+}
+
+/* Neutral marks replace the former blue/purple avatar and icon tiles. */
+.space-icon,
+.space-menu-mark,
+.edition-choice-icon,
+.recording-title-icon,
+.capture-option-icon,
+.general-agent-icon,
+.agent-sync-icon,
+.file-mark,
+.welcome-mark,
+.account-avatar,
+.user-avatar,
+.team-space-avatar,
+.team-space-menu-mark,
+.team-agent-mark,
+.team-shared-card-mark,
+.team-attention-count,
+.team-insight-strip > span:first-child,
+.points-action-icon,
+.xiaozhi-mark,
+.xiaozhi-entry-mark {
+  color: #fff !important;
+  background: #353535 !important;
+  box-shadow: none !important;
+}
+
+.space-icon .icon,
+.space-menu-mark .icon,
+.edition-choice-icon .icon,
+.recording-title-icon .icon,
+.capture-option-icon .icon,
+.general-agent-icon .icon,
+.agent-sync-icon .icon,
+.file-mark .icon,
+.welcome-mark .icon,
+.account-avatar .icon,
+.user-avatar .icon,
+.team-space-avatar .icon,
+.team-space-menu-mark .icon,
+.team-agent-mark .icon,
+.team-shared-card-mark .icon,
+.team-attention-count .icon,
+.team-insight-strip > span:first-child .icon,
+.points-action-icon .icon,
+.xiaozhi-mark .icon,
+.xiaozhi-entry-mark .icon {
+  color: #fff !important;
+}
+
+.team-space-menu button.active,
+.team-workspace-switcher > button[aria-expanded="true"],
+.team-plan-option.selected,
+.team-agent-card.selected,
+.team-cycle-toggle button.active,
+.team-payment-method.selected,
+.personal-team-cta,
+.team-plan-current,
+.team-payment-box,
+.team-seat-note,
+.team-setting-note,
+.team-handoff-context-item:hover {
+  color: #171717 !important;
+  border-color: #bcbcbc !important;
+  background: #f0f0f0 !important;
+}
+
+.team-space-menu button.active,
+.team-plan-option.selected,
+.team-agent-card.selected,
+.team-payment-method.selected {
+  box-shadow: inset 0 0 0 1px #555 !important;
+}
+
+.team-knowledge-row .knowledge-row-action button:hover,
+.team-shared-project-row .knowledge-row-action button:hover,
+.team-inline-share[data-team-shared-open],
+.team-inline-share[data-team-shared-open]:hover {
+  color: #111 !important;
+  background: #eeeeee !important;
+}
+
+.team-knowledge-row .knowledge-row-action button,
+.team-shared-project-row .knowledge-row-action button,
+.team-folder-dialog button,
+.team-file-actions-menu button,
+.knowledge-tree-menu button {
+  color: #4a4a4a !important;
+}
+
+.team-knowledge-row .knowledge-row-action .team-icon-action.danger:hover,
+.team-danger-zone button,
+.team-danger-zone strong,
+.team-danger-zone p,
+.artifact-error {
+  color: #333 !important;
+}
+
+.team-knowledge-row .knowledge-row-action .team-icon-action.danger:hover,
+.team-danger-zone button {
+  border-color: #777 !important;
+  background: #f0f0f0 !important;
+}
+
+/* Personal and enterprise application-data lists use the same compact schema
+   as the team list: name, type, Agent source, state, update time, actions. */
+.knowledge-workspace .knowledge-table-head.artifact-app-data-head,
+.knowledge-workspace .knowledge-file-row.artifact-app-data-row {
+  grid-template-columns: 34px minmax(260px, 1.8fr) 82px minmax(150px, 1fr) 82px 126px 190px;
+}
+.artifact-app-data-row .artifact-actions { display: inline-flex; align-items: center; justify-content: flex-end; gap: 12px; }
+.artifact-app-data-row .artifact-text-action {
+  padding: 0;
+  border: 0;
+  color: #555;
+  background: transparent;
+  cursor: pointer;
+  font-size: 10px;
+  white-space: nowrap;
+}
+.artifact-app-data-row .artifact-text-action:hover { color: #111; text-decoration: underline; text-underline-offset: 3px; }
+
+@media (max-width: 760px) {
+  .knowledge-workspace .knowledge-content:has(.artifact-app-data-head) { overflow-x: auto; }
+  .knowledge-workspace .knowledge-content:has(.artifact-app-data-head) > .artifact-app-data-head,
+  .knowledge-workspace .knowledge-content:has(.artifact-app-data-head) > .artifact-app-data-list { min-width: 820px; }
+  .knowledge-workspace .knowledge-table-head.artifact-app-data-head > :nth-child(4),
+  .knowledge-workspace .knowledge-table-head.artifact-app-data-head > :nth-child(6),
+  .knowledge-workspace .knowledge-file-row.artifact-app-data-row > :nth-child(4),
+  .knowledge-workspace .knowledge-file-row.artifact-app-data-row > :nth-child(6) { display: block; }
+}
+
+.team-flow-step.active,
+.team-flow-step.done,
+.team-flow-step.active > span,
+.team-flow-step.done > span,
+.team-flow-step > span {
+  color: #222 !important;
+  border-color: #999 !important;
+  background: #f3f3f3 !important;
+}
+
+.team-flow-step.active > span {
+  color: #fff !important;
+  background: #222 !important;
+}
+
+.team-usage-track,
+.knowledge-storage-track,
+.progress-track {
+  background: #e1e1e1 !important;
+}
+
+.team-usage-track i,
+.knowledge-storage-track i,
+.progress-track i,
+.running-dot,
+.timeline-dot,
+.recording-meta .live i,
+.progress-step i,
+.progress-step.done i {
+  background: #555 !important;
+  box-shadow: none !important;
+}
+
+/* Status chips remain distinguishable through weight and neutral contrast,
+   without reintroducing green/orange/blue accents. */
+.status,
+.knowledge-state,
+.knowledge-state.pending,
+.home-meeting-status,
+.home-meeting-status.ready,
+.home-meeting-status.processing,
+.connector-status,
+.team-row-status,
+.team-row-status.ready,
+.team-row-status.info,
+.team-member-state,
+.invite-success-mark {
+  color: #4a4a4a !important;
+  background: #eeeeee !important;
+}
+
+.status i,
+.knowledge-state i,
+.online i,
+.home-meeting-status i,
+.connector-status i,
+.team-member-state i,
+.team-row-status i {
+  background: #666 !important;
+  box-shadow: none !important;
+}
+
+.team-home-kicker,
+.team-home-usage-head strong,
+.team-seat-note strong,
+.team-plan-current small,
+.team-plan-current strong,
+.team-plan-kicker,
+.team-enterprise-includes,
+.team-share-target em {
+  color: #3f3f3f !important;
+}
+
+.team-enterprise-includes,
+.team-plan-kicker {
+  border-color: #bdbdbd !important;
+  background: #f1f1f1 !important;
+}
+
+.artifact-editor-actions button.primary,
+.artifact-save-entry,
+.artifact-dialog button.primary {
+  color: #fff !important;
+  border-color: #171717 !important;
+  background: #171717 !important;
+}
+
+.artifact-editor-actions button,
+.artifact-dialog button,
+.artifact-save-entry {
+  box-shadow: none !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+button:focus-visible,
+a:focus-visible,
+textarea:focus-visible,
+.artifact-sheet input:focus {
+  border-color: #555 !important;
+  outline-color: #555 !important;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, .12) !important;
+}
+
+/* Keep the compact meeting tabs visibly aligned in the monochrome treatment. */
+.meeting-view-tab.active {
+  color: #111 !important;
+  border-color: #8d8d8d !important;
+  background: #f0f0f0 !important;
+}
+
+.home-desktop-guide {
+  border-color: #303030 !important;
+  color: #f5f5f5 !important;
+  background: #252525 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}

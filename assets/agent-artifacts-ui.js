@@ -74,6 +74,11 @@ window.ArtifactUI = (() => {
   }
   function row(item, index) {
     const folder = item.preview === 'folder';
+    if (isArtifact() && item.artifact && !folder) {
+      const sourceAgent = item.agent || item.source || '销售简报 Agent';
+      const artifactActions = `<button type="button" class="artifact-text-action" data-toast="正在打开 ${esc(item.name)} 的版本记录">版本记录</button><button type="button" class="artifact-text-action" data-knowledge-row-action="edit">编辑</button><button type="button" class="file-trash-button" data-knowledge-row-action="delete" title="删除" aria-label="删除 ${esc(item.name)}"><svg class="icon" aria-hidden="true"><use href="#ico-trash"/></svg></button>`;
+      return `<div class="knowledge-file-row artifact-app-data-row" role="button" tabindex="0" data-schema="file" data-knowledge-index="${index}"><span><input class="knowledge-check" type="checkbox" aria-label="选择${esc(item.name)}"></span><span class="knowledge-file-name"><span class="knowledge-file-mark"><svg class="icon"><use href="#ico-file"/></svg></span><span><strong>${esc(item.name)}</strong><small>${esc(item.meta || `${sourceAgent} 生成 · ${item.type}`)}</small></span></span><span>${esc(item.type)}</span><span>${esc(sourceAgent)}</span><span>${knowledgeStateHTML(item.state || '已生成')}</span><span>${esc(item.updated || '—')}</span><span class="artifact-actions">${artifactActions}</span></div>`;
+    }
     return `<div class="knowledge-file-row" role="button" tabindex="0" data-schema="file" data-knowledge-index="${index}"><span>${item.system || folder ? '' : `<input class="knowledge-check" type="checkbox" aria-label="选择${esc(item.name)}">`}</span><span class="knowledge-file-name"><span class="knowledge-file-mark"><svg class="icon"><use href="#${folder ? 'ico-folder' : 'ico-file'}"/></svg></span><strong>${esc(item.name)}</strong></span><span>${esc(item.type)}</span><span>${esc(item.size)}</span><span>${folder ? '—' : knowledgeStateHTML(item.state)}${item.state === '解析失败' ? '<button class="artifact-retry" data-artifact-retry>重试解析</button>' : ''}</span><span class="artifact-creator"><span>${esc(item.creator || '—')}</span><small title="${esc(item.organization)}">${esc(item.organization || '—')}</small></span><span>${folder ? '—' : esc(item.updated)}</span><span class="artifact-actions">${KnowledgeFileActions.actions(item)}</span></div>`;
   }
   function matches(item) {
@@ -141,5 +146,6 @@ window.ArtifactUI = (() => {
     window.addEventListener('storage', event => { if (event.key === model.key) { sync(); if (!editing && !q('.knowledge-workspace').hidden) renderKnowledgeFiles(); } });
     sync();
   }
-  return { init, guard, closePreview, preview, row, matches, configureFolder, sync, isArtifact, scope, dialogOpen: () => !!q('.artifact-dialog[open]'), labels: ['', '文件名','类型','大小','文件状态','创建人','更新时间','操作'] };
+  const labelsForCurrentView = () => isArtifact() ? ['', '名称', '类型', '来源', '状态', '更新时间', '操作'] : ['', '文件名','类型','大小','文件状态','创建人','更新时间','操作'];
+  return { init, guard, closePreview, preview, row, matches, configureFolder, sync, isArtifact, scope, labelsForCurrentView, dialogOpen: () => !!q('.artifact-dialog[open]'), labels: ['', '文件名','类型','大小','文件状态','创建人','更新时间','操作'] };
 })();

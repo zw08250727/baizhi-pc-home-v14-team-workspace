@@ -22,12 +22,32 @@ body[data-workspace="team"] #history-tab-shared { display: inline-flex !importan
 body[data-workspace="team"] #history-shared-guide { display: none !important; }
 body[data-workspace="team"] .history-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 body[data-workspace="team"] .page-crumb { color: var(--team-ink); }
-/* Team home mirrors the enterprise recording home. Keep the shared meeting
-   controls visible even though team mode uses the personal edition flag for
-   the rest of the shell. */
-body[data-workspace="team"] .recording-home > .recording-commandbar,
-body[data-workspace="team"] .recording-home > .meeting-agent-grid { display: grid !important; }
+/* Team home mirrors the personal/enterprise recording home. The shared
+   meeting grid must keep the main content width while Xiaozhi is open; its
+   rail is a fixed overlay at desktop widths. Only the command bar needs an
+   explicit display value here because team mode reuses the personal edition
+   shell. */
 body[data-workspace="team"] .recording-home > .recording-commandbar { display: flex !important; }
+body[data-workspace="team"] .recording-home,
+body[data-workspace="team"] .meeting-agent-grid,
+body[data-workspace="team"] .home-meeting-library,
+body[data-workspace="team"] .home-meeting-head,
+body[data-workspace="team"] .meeting-library-copy { min-width: 0; }
+body[data-workspace="team"] .meeting-library-copy { flex: 0 0 auto; }
+
+/* When the fixed Xiaozhi rail leaves a medium-width canvas, stack the
+   meeting title and filters instead of allowing the title flex item to
+   collapse to a one-character column. This is the same fallback used by
+   the personal workspace at narrower widths. */
+@media (min-width: 1101px) and (max-width: 1290px) {
+  body[data-workspace="team"] .meeting-agent-grid.agent-open .home-meeting-head {
+    align-items: flex-start;
+    flex-direction: column;
+    padding-top: 14px;
+    padding-bottom: 14px;
+  }
+  body[data-workspace="team"] .meeting-agent-grid.agent-open .home-meeting-toolbar { width: 100%; }
+}
 body[data-workspace="team"] .meeting-view-tabs .edition-enterprise-only { display: inline-flex !important; }
 body[data-workspace="team"] .home-desktop-guide { display: none !important; }
 .team-workspace-dashboard { display: none !important; }
@@ -66,6 +86,10 @@ body[data-workspace="team"] .team-file-group .team-agent-group { display: none !
 .knowledge-workspace .knowledge-file-row[data-schema="file"].team-knowledge-row {
   grid-template-columns: 34px minmax(240px,1.5fr) 74px 58px 70px 88px 84px 126px 112px;
 }
+.knowledge-workspace .knowledge-table-head[data-schema="team"].team-app-data-head,
+.knowledge-workspace .knowledge-file-row[data-schema="file"].team-app-data-row {
+  grid-template-columns: 34px minmax(260px,1.8fr) 82px minmax(150px,1fr) 82px 126px 190px;
+}
 .team-knowledge-row .knowledge-file-name { min-width: 0; }
 .team-knowledge-row .knowledge-file-name strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: #3f4a5d; }
 .team-knowledge-row .knowledge-file-name small { display: block; margin-top: 3px; color: #9aa3b1; font-size: 9px; }
@@ -75,6 +99,20 @@ body[data-workspace="team"] .team-file-group .team-agent-group { display: none !
 .team-knowledge-row .knowledge-row-action button:hover { color: var(--blue); background: #eef4ff; }
 .team-knowledge-row .knowledge-row-action .team-icon-action { width: 28px; height: 28px; }
 .team-knowledge-row .knowledge-row-action .team-icon-action .icon { width: 15px; height: 15px; }
+.team-app-data-row .knowledge-row-action { gap: 12px; }
+.team-app-data-row .team-text-action {
+  width: auto;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: #5f6b7e;
+  background: transparent;
+  font-size: 10px;
+  white-space: nowrap;
+}
+.team-app-data-row .team-text-action:hover { color: #171717; background: transparent; text-decoration: underline; text-underline-offset: 3px; }
+.team-app-data-row .team-icon-action.danger { margin-left: 2px; }
 .team-knowledge-row .knowledge-row-action .team-icon-action.danger:hover { color: #d9535f; background: #fff0f1; }
 .knowledge-workspace .knowledge-table-head[data-schema="team"].team-shared-project-head,
 .knowledge-workspace .knowledge-file-row[data-schema="file"].team-shared-project-row {
@@ -97,6 +135,15 @@ body[data-workspace="team"] .team-shared-project-content > .team-shared-project-
   .knowledge-workspace .knowledge-table-head[data-schema="team"].team-shared-project-head > :nth-child(6),
   .knowledge-workspace .knowledge-file-row[data-schema="file"].team-shared-project-row > :nth-child(4),
   .knowledge-workspace .knowledge-file-row[data-schema="file"].team-shared-project-row > :nth-child(6) { display: block; }
+}
+@media (max-width: 760px) {
+  body[data-workspace="team"] .team-app-data-content { overflow-x: auto; }
+  body[data-workspace="team"] .team-app-data-content > .team-app-data-head,
+  body[data-workspace="team"] .team-app-data-content > .team-app-data-list { min-width: 820px; }
+  .knowledge-workspace .knowledge-table-head[data-schema="team"].team-app-data-head > :nth-child(4),
+  .knowledge-workspace .knowledge-table-head[data-schema="team"].team-app-data-head > :nth-child(6),
+  .knowledge-workspace .knowledge-file-row[data-schema="file"].team-app-data-row > :nth-child(4),
+  .knowledge-workspace .knowledge-file-row[data-schema="file"].team-app-data-row > :nth-child(6) { display: block; }
 }
 
 /* Shared tree rhythm: enterprise, personal and team folders use one geometry. */

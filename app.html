@@ -1245,12 +1245,12 @@
     .meeting-view-tabs {
       display: grid;
       width: max-content;
-      grid-template-columns: repeat(3, 76px);
+      grid-template-columns: repeat(3, 96px);
       gap: 6px;
     }
     .meeting-view-tab {
       display: inline-flex;
-      width: 76px;
+      width: 96px;
       height: 34px;
       align-items: center;
       justify-content: center;
@@ -1260,6 +1260,7 @@
       font-size: 12px;
       font-weight: 500;
       line-height: 1;
+      white-space: nowrap;
     }
     .meeting-view-tab:hover { color: #162033; background: #f4f5f7; }
     .meeting-view-tab.active {
@@ -1269,7 +1270,7 @@
       box-shadow: none;
     }
     body[data-edition="personal"]:not([data-workspace="team"]) .meeting-view-tabs {
-      grid-template-columns: repeat(2, 76px);
+      grid-template-columns: repeat(2, 96px);
     }
     .meeting-viewbar .recording-command-actions {
       display: flex;

@@ -48,6 +48,13 @@
     if (!Array.isArray(team.agentArtifacts)) team.agentArtifacts = team.id === "team-demo" ? createSeedAgentArtifacts() : [];
     else {
       const excelArtifacts = team.agentArtifacts.filter((item) => item && item.type === "XLSX");
+      // Older browser state may contain an empty agentArtifacts array after
+      // the app-data migration. Restore the two built-in Excel files for the
+      // demo team while leaving any non-Excel custom artifacts untouched.
+      if (team.id === "team-demo" && excelArtifacts.length === 0) {
+        team.agentArtifacts = createSeedAgentArtifacts().concat(team.agentArtifacts.filter((item) => item && item.type !== "XLSX"));
+        return team;
+      }
       const customArtifacts = excelArtifacts.filter((item) => !DEMO_SEED_AGENT_ARTIFACT_NAMES.has(item.name) || item.sourceSessionId);
       const legacySeeds = excelArtifacts
         .filter((item) => DEMO_SEED_AGENT_ARTIFACT_NAMES.has(item.name) && !item.sourceSessionId)

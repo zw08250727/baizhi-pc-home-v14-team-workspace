@@ -136,6 +136,30 @@
     .relay-context-dismiss .icon { width: 13px; height: 13px; }
     .relay-context-items { display: flex; flex-wrap: wrap; gap: 5px; margin: 9px 0 0 33px; }
     .relay-context-item { display: inline-flex; min-height: 22px; align-items: center; padding: 0 7px; border: 1px solid #dce5f3; border-radius: 6px; color: #536681; background: #fff; font-size: 8px; line-height: 20px; }
+    .shared-permission-note { width: min(850px, calc(100% - 50px)); margin: 0 auto 10px; padding: 9px 12px; border: 1px solid #e2e5ea; border-radius: 9px; color: #666d78; background: #f7f8fa; font-size: 9px; line-height: 15px; }
+    .shared-permission-note.edit { color: #4f5d70; border-color: #d7e1f0; background: #f5f8fc; }
+    .agent-composer-wrap.shared-readonly { border-color: #e2e5ea; background: #f7f8fa; box-shadow: none; }
+    .agent-composer-wrap.shared-readonly .agent-input { color: #8f98a5; cursor: not-allowed; }
+    .shared-conversation-intro { margin-bottom: 14px; padding: 13px 15px; border: 1px solid #e1e6ed; border-radius: 11px; background: #f8f9fb; }
+    .shared-conversation-intro strong, .shared-conversation-intro small { display: block; }
+    .shared-conversation-intro strong { color: #344156; font-size: 12px; line-height: 18px; }
+    .shared-conversation-intro small { margin-top: 4px; color: #7e8999; font-size: 9px; line-height: 15px; }
+    .shared-message { position: relative; }
+    .shared-message.continuation { border-color: #cfd9e8; background: #fbfcfe; }
+    .shared-message-label { display: inline-flex; align-items: center; gap: 5px; margin-bottom: 8px; color: #8c96a5; font-size: 8px; }
+    .shared-message-label i { width: 6px; height: 6px; border-radius: 50%; background: #6d819e; }
+    .shared-message-label.continuation i { background: #4e7abd; }
+    .shared-tool { margin: 8px 0; }
+    .shared-artifact-list { display: grid; gap: 7px; margin-top: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .shared-artifact { display: grid; min-height: 48px; align-items: center; gap: 8px; padding: 8px 9px; border: 1px solid #e1e6ed; border-radius: 8px; color: #4c5a70; background: #fff; cursor: pointer; grid-template-columns: 25px minmax(0, 1fr); text-align: left; }
+    .shared-artifact:hover { border-color: #c9d5e7; background: #fbfdff; }
+    .shared-artifact-mark { display: inline-grid; width: 25px; height: 25px; place-items: center; border-radius: 7px; color: #566a83; background: #eef2f6; font-size: 8px; font-weight: 700; }
+    .shared-artifact strong, .shared-artifact small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .shared-artifact strong { font-size: 9px; line-height: 14px; }
+    .shared-artifact small { margin-top: 1px; color: #9aa3af; font-size: 8px; line-height: 12px; }
+    .shared-version-note { margin: 10px 0 0; color: #8791a0; font-size: 9px; line-height: 15px; }
+    .shared-readonly .composer-tool { color: #a1a8b2; cursor: not-allowed; }
+    .shared-readonly .agent-send { color: #aeb5c2; background: #e7e9ee; cursor: not-allowed; }
     .composer-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 4px; }
     .composer-tools { display: flex; min-width: 0; align-items: center; gap: 6px; }
     .composer-tool { display: inline-flex; height: 27px; align-items: center; gap: 5px; padding: 0 7px; border: 0; border-radius: 7px; color: #748095; background: transparent; cursor: pointer; font-size: 8px; }
@@ -189,6 +213,8 @@
       .agent-suggestions { grid-template-columns: 1fr; }
       .suggestion { min-height: 44px; }
       .relay-context-banner { width: min(850px, calc(100% - 32px)); }
+      .shared-permission-note { width: min(850px, calc(100% - 32px)); }
+      .shared-artifact-list { grid-template-columns: 1fr; }
     }
   </style>
   <link rel="stylesheet" href="assets/agent-artifacts.css" />
@@ -239,6 +265,7 @@
         <div class="relay-context-head"><span class="relay-context-mark" aria-hidden="true">↗</span><div class="relay-context-copy"><strong id="relay-context-title">已接入共享项目</strong><small id="relay-context-meta"></small></div><button class="relay-context-dismiss" id="relay-context-dismiss" type="button" aria-label="移除接力上下文" title="移除接力上下文"><svg class="icon"><use href="#ico-close"/></svg></button></div>
         <div class="relay-context-items" id="relay-context-items"></div>
       </section>
+      <p class="shared-permission-note" id="shared-permission-note" hidden></p>
       <form class="agent-composer-wrap" id="agent-composer-form">
         <textarea class="agent-input" id="agent-input" rows="2" aria-label="告诉 Agent 你的任务" placeholder="告诉 Agent 你想完成什么…"></textarea>
         <div class="composer-footer"><div class="composer-tools"><button class="composer-tool" type="button"><svg class="icon"><use href="#ico-plus"/></svg>添加附件</button><button class="composer-tool" type="button"><svg class="icon"><use href="#ico-book"/></svg><span id="knowledge-source-label">引用企业知识库</span></button><button class="composer-tool" type="button"><svg class="icon"><use href="#ico-globe"/></svg>全域网站</button></div><button class="agent-send" id="agent-send" type="submit" disabled aria-label="发送任务"><svg class="icon"><use href="#ico-send"/></svg></button></div>
@@ -268,8 +295,12 @@
     const relayProjectId = params.get("relayProject") || "";
     const relayTitle = params.get("relayTitle") || "";
     const relayTeamName = params.get("teamName") || "";
+    const relayTeamId = params.get("teamId") || "";
     const relayMember = params.get("relayMember") || "";
+    const sourceMember = params.get("sourceMember") || "";
     const relayPermission = params.get("relayPermission") === "read" ? "只读" : "可编辑";
+    const sharedAgentMode = params.get("relayMode") === "shared-agent";
+    const sharedReadOnly = sharedAgentMode && relayPermission === "只读";
     let relayItems = [];
     try {
       const parsedRelayItems = JSON.parse(params.get("relayItems") || "[]");
@@ -297,6 +328,34 @@
       "lead-list": { name: "华东零售客户线索.xlsx", type: "XLSX", meta: "18 条线索 · 2026-09-04 14:18" },
       "verification-note": { name: "线索核验说明.md", type: "MD", meta: "6 个引用来源 · 2026-09-04 14:18" }
     };
+    const TEAM_STORAGE_KEY = "baizhi-v14-team-workspace";
+    const loadSharedProject = () => {
+      if (!sharedAgentMode || !relayProjectId) return null;
+      try {
+        const state = JSON.parse(window.localStorage.getItem(TEAM_STORAGE_KEY) || "null");
+        const team = state?.teams?.find((item) => (relayTeamId && item.id === relayTeamId) || (!relayTeamId && item.name === relayTeamName));
+        const project = team?.sharePackages?.find((item) => item.id === relayProjectId);
+        if (!project) return null;
+        if (!project.sourceConversation || !Array.isArray(project.sourceConversation.messages)) {
+          project.sourceConversation = {
+            id: `conversation-${project.id}`,
+            memberName: project.sourceOwner || project.sharedBy || sourceMember || "共享成员",
+            agentName: project.sourceAgentName || project.targetAgentName || agentName,
+            messages: [
+              { role: "user", memberName: project.sourceOwner || project.sharedBy || sourceMember || "共享成员", time: project.createdAt || "刚刚", text: `请基于本次 Session 的资料，完成「${project.title || relayTitle}」并整理可交付结论。` },
+              { role: "agent", agentName: project.sourceAgentName || project.targetAgentName || agentName, time: project.createdAt || "刚刚", text: "我已完成本次 Session 的分析，并把结果沉淀为共享项目产物。" }
+            ],
+            artifacts: (project.items || []).filter((item) => /\.(xlsx|xls|md|html|pptx)$/i.test(item)).map((name) => ({ name, type: name.split(".").pop().toUpperCase(), source: "共享 Agent 生成", updated: project.createdAt || "刚刚" }))
+          };
+        }
+        if (!Array.isArray(project.sourceConversation.artifacts)) project.sourceConversation.artifacts = [];
+        if (!Array.isArray(project.continuations)) project.continuations = [];
+        return project;
+      } catch (error) {
+        return null;
+      }
+    };
+    let sharedProject = loadSharedProject();
     let activeTaskId = null;
 
     const allTasks = () => taskGroups.flatMap((group) => group.tasks);
@@ -306,6 +365,101 @@
     };
     const renderToolCall = (label, detail, state = "已完成") => `<div class="tool-call"><button class="tool-call-button" type="button" data-tool-call aria-expanded="false"><strong>${label}</strong><span>${detail}</span><em>${state}　⌄</em></button><div class="tool-call-detail" data-tool-detail hidden>已记录输入条件、执行时间和来源范围。点击工具行可以收起详情。</div></div>`;
     const renderConversation = (task) => ArtifactResults.sales(task) ? ArtifactResults.conversation(task) : `<article class="message message-user"><div>${escapeHTML(task.prompt)}</div></article><article class="message message-agent"><h3>${task.progress < 100 ? "正在执行客户线索研究" : "任务已完成"}</h3><div class="task-progress"><div class="progress-step done"><i></i>明确目标市场与筛选条件</div>${renderToolCall("搜索网页", "华东地区零售企业、数字化升级与扩店计划")}${renderToolCall(edition === "personal" ? "读取我的知识库" : "读取企业知识库", "零售行业客户画像与历史商机")}${renderToolCall("数据核验", "企业动态、业务范围与联系人证据链", task.progress < 100 ? "执行中" : "已完成")}<div class="progress-step ${task.progress === 100 ? "done" : ""}"><i></i>${task.progress === 100 ? "生成最终交付文件" : "正在核验企业与联系人信息"}</div></div><p>${escapeHTML(task.summary)}</p><div class="source-links"><button class="source-link" type="button" data-source-id="retail-report">零售行业数字化报告</button><button class="source-link" type="button" data-source-id="company-news">企业新闻与招聘动态</button></div><div class="output-files"><button class="output-file" type="button" data-file-id="lead-list"><span class="file-mark">X</span><span><strong>${files["lead-list"].name}</strong><small>${files["lead-list"].meta}</small></span></button><button class="output-file" type="button" data-file-id="verification-note"><span class="file-mark">M</span><span><strong>${files["verification-note"].name}</strong><small>${files["verification-note"].meta}</small></span></button></div></article>`;
+    const sharedArtifacts = () => {
+      if (!sharedProject) return [];
+      const listed = Array.isArray(sharedProject.sourceConversation?.artifacts) ? sharedProject.sourceConversation.artifacts.slice() : [];
+      const names = new Set(listed.map((item) => item.name));
+      (sharedProject.items || []).filter((item) => /\.(xlsx|xls|md|html|pptx)$/i.test(item)).forEach((name) => {
+        if (!names.has(name)) listed.push({ name, type: name.split(".").pop().toUpperCase(), source: `${sharedProject.sourceAgentName || agentName} 生成`, updated: sharedProject.createdAt || "刚刚" });
+      });
+      return listed;
+    };
+    const renderSharedMessage = (message) => {
+      const role = message.role || "agent";
+      const continuation = message.continuation ? " continuation" : "";
+      const label = role === "user" ? `${message.memberName || sourceMember || "共享成员"} · ${message.time || ""}` : role === "tool" ? `${message.agentName || agentName} · 工具记录` : `${message.agentName || agentName} · ${message.time || ""}`;
+      const labelClass = `shared-message-label${message.continuation ? " continuation" : ""}`;
+      if (role === "tool") return `<article class="message message-agent shared-message shared-tool${continuation}"><span class="${labelClass}"><i></i>${escapeHTML(label)}</span>${renderToolCall("读取共享上下文", message.text || message.content || "", "已记录")}${message.detail ? `<p>${escapeHTML(message.detail)}</p>` : ""}</article>`;
+      if (role === "user") return `<article class="message message-user shared-message${continuation}"><div><span class="${labelClass}"><i></i>${escapeHTML(label)}</span>${escapeHTML(message.text || message.content || "")}</div></article>`;
+      return `<article class="message message-agent shared-message${continuation}"><span class="${labelClass}"><i></i>${escapeHTML(label)}</span><h3>${escapeHTML(message.title || "Agent 执行结果")}</h3><p>${escapeHTML(message.text || message.content || "")}</p>${message.detail ? `<p>${escapeHTML(message.detail)}</p>` : ""}</article>`;
+    };
+    const renderSharedHistory = () => {
+      if (!sharedProject) return;
+      const continuations = Array.isArray(sharedProject.continuations) ? sharedProject.continuations : [];
+      $("#task-history").innerHTML = `<section><div class="task-group-label">共享项目</div><button class="task-row active" type="button"><i></i><span>${escapeHTML(sharedProject.title || relayTitle || "共享项目")}</span></button>${continuations.map((item, index) => `<button class="task-row" type="button"><i></i><span>接力 v${index + 1} · ${escapeHTML(item.memberName || relayMember || "团队成员")}</span></button>`).join("")}</section>`;
+    };
+    const renderSharedFileList = () => {
+      const artifacts = sharedArtifacts();
+      $("#file-preview").hidden = true;
+      $("#task-file-list").hidden = false;
+      $("#task-file-list").innerHTML = `<section class="panel-section"><div class="panel-section-title">共享产物 <span>${artifacts.length}</span></div>${artifacts.length ? artifacts.map((file) => `<button class="panel-file" type="button" data-shared-file="${escapeHTML(file.name)}"><span class="file-mark">${file.type === "XLSX" ? "X" : file.type === "MD" ? "M" : "F"}</span><span><strong>${escapeHTML(file.name)}</strong><small>${escapeHTML(file.source || "共享 Agent 产物")} · ${escapeHTML(file.updated || "刚刚")}</small></span></button>`).join("") : '<div class="panel-placeholder">本次共享项目没有文件产物。</div>'}</section><section class="panel-section"><div class="panel-section-title">共享范围</div><div class="panel-source">${escapeHTML(sharedProject.sourceOwner || sourceMember || "共享成员")} <span>共享人</span></div><div class="panel-source">${escapeHTML(sharedProject.sourceAgentName || agentName)} <span>源 Agent</span></div><div class="panel-source">${sharedReadOnly ? "只读" : "可编辑"} <span>当前权限</span></div></section>`;
+    };
+    const openSharedArtifactPreview = (name) => {
+      const file = sharedArtifacts().find((item) => item.name === name);
+      if (!file) return;
+      $("#task-file-list").hidden = true;
+      const preview = $("#file-preview");
+      preview.className = "file-preview";
+      const cells = Array.isArray(file.cells) && file.cells.length ? file.cells : [["项目", "说明"], ["共享产物", "该文件来自共享 Agent 对话，可在当前团队中继续引用。"]];
+      const table = file.type === "XLSX" ? `<div class="preview-table-wrap"><table class="preview-table"><thead><tr>${cells[0].map((cell) => `<th>${escapeHTML(cell)}</th>`).join("")}</tr></thead><tbody>${cells.slice(1).map((row) => `<tr>${row.map((cell) => `<td>${escapeHTML(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>` : `<p>这是共享项目中的 ${escapeHTML(file.type || "文件")} 产物，已随源 Agent 对话一起授权。</p>`;
+      preview.hidden = false;
+      preview.innerHTML = `<div class="file-preview-head"><button class="preview-back" id="shared-file-preview-back" type="button">← 返回共享产物</button></div><h2>${escapeHTML(file.name)}</h2><p>${escapeHTML(file.source || "共享 Agent 生成")} · ${escapeHTML(file.updated || "刚刚")}</p>${table}`;
+      preview.querySelector("#shared-file-preview-back").addEventListener("click", renderSharedFileList);
+    };
+    const renderSharedConversation = () => {
+      if (!sharedProject) return;
+      const conversation = sharedProject.sourceConversation || {};
+      const messages = Array.isArray(conversation.messages) ? conversation.messages : [];
+      const artifacts = sharedArtifacts();
+      $("#new-task-view").hidden = true;
+      $("#conversation-view").hidden = false;
+      $("#task-title").textContent = sharedProject.title || relayTitle || "共享项目";
+      $("#conversation-stream").innerHTML = `<article class="shared-conversation-intro"><strong>${escapeHTML(sharedProject.sourceOwner || sourceMember || "共享成员")} 的「${escapeHTML(sharedProject.sourceAgentName || agentName)}」对话</strong><small>这是本次共享项目的完整 Session 快照，包含消息、工具记录和已授权产物。${sharedReadOnly ? "当前为只读权限。" : "当前可编辑，可在下方继续下达指令。"}</small></article>${messages.map(renderSharedMessage).join("")}${artifacts.length ? `<p class="shared-version-note">共享产物已附在本次对话中，可从右侧任务文件面板打开预览。</p>` : ""}`;
+      renderSharedFileList();
+      setFilePanelOpen(true);
+    };
+    const persistSharedContinuation = (prompt) => {
+      if (!sharedProject || sharedReadOnly || !prompt.trim()) return;
+      try {
+        const state = JSON.parse(window.localStorage.getItem(TEAM_STORAGE_KEY) || "null");
+        const team = state?.teams?.find((item) => (relayTeamId && item.id === relayTeamId) || (!relayTeamId && item.name === relayTeamName));
+        const project = team?.sharePackages?.find((item) => item.id === relayProjectId);
+        if (!team || !project) return;
+        if (!project.sourceConversation || !Array.isArray(project.sourceConversation.messages)) project.sourceConversation = sharedProject.sourceConversation || { messages: [], artifacts: [] };
+        if (!Array.isArray(project.sourceConversation.artifacts)) project.sourceConversation.artifacts = [];
+        if (!Array.isArray(project.continuations)) project.continuations = [];
+        const version = project.continuations.length + 1;
+        const timestamp = new Date().toLocaleString("sv-SE", { timeZone: "Asia/Shanghai" }).slice(0, 16);
+        const sourceAgentName = project.sourceAgentName || project.targetAgentName || agentName;
+        const memberName = relayMember || project.relayMemberName || "当前成员";
+        const response = `已基于共享项目「${project.title || relayTitle}」继续处理你的指令，整理出下一步行动并更新了接力产物。`;
+        project.continuations.push({ id: `continuation-${Date.now()}`, version, memberName, agentName: sourceAgentName, prompt: prompt.trim(), response, createdAt: timestamp });
+        project.sourceConversation.messages.push({ id: `continuation-user-${Date.now()}`, role: "user", continuation: true, memberName, time: timestamp, text: prompt.trim() }, { id: `continuation-agent-${Date.now()}`, role: "agent", continuation: true, agentName: sourceAgentName, time: timestamp, title: `接力 v${version} · 已完成`, text: response, detail: "本次接力基于已共享的上下文执行，不会读取共享人的其他私人 Session。" });
+        const artifactName = `${project.title || relayTitle}-接力记录.xlsx`;
+        let output = team.agentArtifacts.find((item) => item.sourceSessionId === project.id && item.type === "XLSX");
+        if (!output) {
+          output = { name: artifactName, type: "XLSX", sourceSessionId: project.id, history: [] };
+          team.agentArtifacts.unshift(output);
+        }
+        output.name = output.name || artifactName;
+        output.agent = sourceAgentName;
+        output.owner = memberName;
+        output.updated = timestamp;
+        output.version = (output.version || 0) + 1;
+        output.cells = [["事项", "负责人", "进度"], ["查看共享 Agent 对话", memberName, "已完成"], ["继续处理项目指令", sourceAgentName, "已完成（模拟）"], ["确认下一步计划", memberName, "待跟进"]];
+        output.history = [...(output.history || []), { version: output.version, agent: sourceAgentName, time: timestamp, action: `${memberName} 在共享 Agent 对话中继续下达指令，更新接力产物` }];
+        if (team.usage && typeof team.usage.credits === "number") team.usage.credits += 2400;
+        window.localStorage.setItem(TEAM_STORAGE_KEY, JSON.stringify(state));
+        sharedProject = project;
+        renderSharedHistory();
+        renderSharedConversation();
+        $("#agent-input").value = "";
+        $("#agent-send").disabled = false;
+      } catch (error) {
+        $("#shared-permission-note").textContent = "保存接力结果失败，请重试。";
+        $("#shared-permission-note").hidden = false;
+      }
+    };
 
     const renderFileList = (task) => {
       $("#file-preview").hidden = true;
@@ -375,6 +529,39 @@
       $("#task-title").textContent = "接力任务";
       document.title = `${agentName} · 接力任务`;
     };
+    const applySharedAgentContext = () => {
+      const banner = $("#relay-context-banner");
+      if (!banner || !sharedProject) return;
+      const items = relayItems.length ? relayItems : (sharedProject.items || ["Session 摘要"]);
+      $("#relay-context-title").textContent = `已接入共享项目：${sharedProject.title || relayTitle}`;
+      $("#relay-context-meta").textContent = `${relayTeamName || "当前团队"} · ${sharedProject.sourceAgentName || agentName} · ${relayPermission} · 共享人：${sharedProject.sourceOwner || sourceMember || "共享成员"}`;
+      $("#relay-context-items").innerHTML = items.map((item) => `<span class="relay-context-item">${escapeHTML(item)}</span>`).join("");
+      banner.hidden = false;
+      const note = $("#shared-permission-note");
+      const composer = $("#agent-composer-form");
+      const input = $("#agent-input");
+      const send = $("#agent-send");
+      if (sharedReadOnly) {
+        note.textContent = "当前为只读权限：可以查看共享人的完整 Agent 对话、工具记录和产物，但不能发送指令或生成新版本。";
+        note.hidden = false;
+        note.classList.remove("edit");
+        composer.classList.add("shared-readonly");
+        input.disabled = true;
+        input.placeholder = "只读权限，无法发送新指令";
+        send.disabled = true;
+      } else {
+        note.textContent = "当前为可编辑权限：可以在共享 Agent 对话下方继续下达指令，接力结果会生成新的版本记录。";
+        note.hidden = false;
+        note.classList.add("edit");
+        composer.classList.remove("shared-readonly");
+        input.disabled = false;
+        input.placeholder = "继续给共享 Agent 下达指令…";
+        input.value = "";
+        send.disabled = true;
+      }
+      $("#task-title").textContent = "共享 Agent 对话";
+      document.title = `${sharedProject.sourceAgentName || agentName} · 共享对话`;
+    };
     const clearRelayContext = () => {
       const banner = $("#relay-context-banner");
       if (banner) banner.hidden = true;
@@ -397,8 +584,14 @@
     $("#source-label").textContent = isTeamWorkspace ? "团队知识库 · 全域网站" : edition === "personal" ? "我的知识库 · 全域网站" : "企业知识库 · 全域网站";
     $("#knowledge-source-label").textContent = isTeamWorkspace ? "引用团队知识库" : edition === "personal" ? "引用我的知识库" : "引用企业知识库";
     $("#agent-suggestions").innerHTML = profile.prompts.map((prompt) => `<button class="suggestion" type="button" data-suggestion="${prompt}">${prompt}</button>`).join("");
-    renderTaskHistory();
-    applyRelayContext();
+    if (sharedAgentMode && sharedProject) {
+      renderSharedHistory();
+      renderSharedConversation();
+      applySharedAgentContext();
+    } else {
+      renderTaskHistory();
+      applyRelayContext();
+    }
 
     $("#agent-suggestions").addEventListener("click", (event) => {
       const button = event.target.closest("[data-suggestion]");
@@ -409,23 +602,27 @@
     });
     $("#agent-input").addEventListener("input", (event) => { $("#agent-send").disabled = !event.currentTarget.value.trim(); });
     $("#relay-context-dismiss").addEventListener("click", clearRelayContext);
-    $("#agent-composer-form").addEventListener("submit", (event) => { event.preventDefault(); const prompt = $("#agent-input").value.trim(); if (prompt) startTask(prompt); });
+    $("#agent-composer-form").addEventListener("submit", (event) => { event.preventDefault(); const prompt = $("#agent-input").value.trim(); if (!prompt) return; if (sharedAgentMode) persistSharedContinuation(prompt); else startTask(prompt); });
     $("#agent-input").addEventListener("keydown", (event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); $("#agent-composer-form").requestSubmit(); } });
     $("#agent-new-task").addEventListener("click", renderNewTask);
     $("#task-history").addEventListener("click", (event) => { const button = event.target.closest("[data-task-id]"); if (button) renderTask(button.dataset.taskId); });
     $("#conversation-stream").addEventListener("click", (event) => {
       const tool = event.target.closest("[data-tool-call]");
       if (tool) { const detail = tool.parentElement.querySelector("[data-tool-detail]"); const open = tool.getAttribute("aria-expanded") !== "true"; tool.setAttribute("aria-expanded", String(open)); detail.hidden = !open; return; }
+      const sharedFileButton = event.target.closest("[data-shared-file]");
+      if (sharedFileButton && sharedAgentMode) { setFilePanelOpen(true); openSharedArtifactPreview(sharedFileButton.dataset.sharedFile); return; }
       const fileButton = event.target.closest("[data-file-id]");
       if (fileButton) { setFilePanelOpen(true); openFilePreview(fileButton.dataset.fileId); }
     });
     $("#task-file-list").addEventListener("click", (event) => {
+      const sharedFileButton = event.target.closest("[data-shared-file]");
+      if (sharedFileButton && sharedAgentMode) { openSharedArtifactPreview(sharedFileButton.dataset.sharedFile); return; }
       const fileButton = event.target.closest("[data-file-id]");
       if (fileButton) openFilePreview(fileButton.dataset.fileId);
     });
     $("#task-file-panel-close").addEventListener("click", () => setFilePanelOpen(false));
     $("#task-file-panel-toggle").addEventListener("click", () => setFilePanelOpen($("#task-file-panel").getAttribute("aria-hidden") === "true"));
-    $("#agent-back").addEventListener("click", () => { if (window.history.length <= 1 && window.opener) window.close(); else window.location.href = `index.html?edition=${edition}&page=capabilities`; });
+    $("#agent-back").addEventListener("click", () => { if (window.history.length <= 1 && window.opener) window.close(); else window.location.href = sharedAgentMode ? `app.html?workspace=team&view=enterprise` : `index.html?edition=${edition}&page=capabilities`; });
     ArtifactResults.init();
   </script>
 </body>

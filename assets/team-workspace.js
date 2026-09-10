@@ -35,6 +35,41 @@
     { agent: "销售简报 Agent", name: "第35周-华东销售数据.xlsx", type: "XLSX", owner: "销售简报 Agent", updated: "上周 15:10", cells: [["区域","成交额（元）","销售目标（元）"],["上海","1081606","1160000"],["杭州","834054","950000"],["南京","708701","770000"]] }
   ]);
   const DEMO_SEED_AGENT_ARTIFACT_NAMES = new Set(["第36周-华东销售数据.xlsx", "第35周-华东销售数据.xlsx", "第34周-华东销售数据.xlsx", "第33周-华东销售数据.xlsx"]);
+  const sharedArtifactType = (name) => {
+    const extension = String(name || "").split(".").pop().toLowerCase();
+    return extension === "xlsx" || extension === "xls" ? "XLSX" : extension === "md" ? "MD" : extension.toUpperCase() || "FILE";
+  };
+  const createSharedConversationSnapshot = (project) => {
+    const title = project.title || "共享项目";
+    const owner = project.sourceOwner || project.sharedBy || "张伟";
+    const agent = project.sourceAgentName || project.targetAgentName || "销售简报 Agent";
+    const items = Array.isArray(project.items) && project.items.length ? project.items : ["Session 摘要"];
+    const artifactItems = items.filter((item) => /\.(xlsx|xls|md|html|pptx)$/i.test(item));
+    return {
+      id: `conversation-${project.id || Date.now()}`,
+      memberName: owner,
+      agentName: agent,
+      messages: [
+        { id: "source-user", role: "user", memberName: owner, time: project.createdAt || "刚刚", text: `请基于本次 Session 的资料，完成「${title}」并整理可交付结论。` },
+        { id: "source-tool", role: "tool", agentName: agent, time: project.createdAt || "刚刚", text: `读取已授权上下文：${items.join("、")}`, detail: "仅读取本次发布时明确授权的 Session 摘要、资料和产物。" },
+        { id: "source-agent", role: "agent", agentName: agent, time: project.createdAt || "刚刚", text: `我已完成「${title}」的分析，梳理了关键结论、风险和下一步行动，并把结果沉淀为共享项目产物。`, detail: artifactItems.length ? `已生成 ${artifactItems.join("、")}。` : "本次没有额外文件产物。" }
+      ],
+      artifacts: artifactItems.map((name) => ({ name, type: sharedArtifactType(name), source: `${agent} 生成`, updated: project.createdAt || "刚刚" }))
+    };
+  };
+  const ensureSharedProjectConversation = (project) => {
+    if (!project) return project;
+    project.sourceAgentId = project.sourceAgentId || project.targetAgentId || "sales-agent";
+    project.sourceAgentName = project.sourceAgentName || project.targetAgentName || "销售简报 Agent";
+    if (!project.sourceConversation || !Array.isArray(project.sourceConversation.messages)) {
+      project.sourceConversation = createSharedConversationSnapshot(project);
+    }
+    if (!Array.isArray(project.sourceConversation.artifacts)) {
+      project.sourceConversation.artifacts = createSharedConversationSnapshot(project).artifacts;
+    }
+    if (!Array.isArray(project.continuations)) project.continuations = [];
+    return project;
+  };
 
   const normalizeTeam = (team) => {
     if (!team) return team;
@@ -45,6 +80,7 @@
     if (!Array.isArray(team.sharePackages)) team.sharePackages = [];
     if (!Array.isArray(team.artifacts)) team.artifacts = [];
     if (!Array.isArray(team.fileFolders)) team.fileFolders = [];
+    team.sharePackages.forEach(ensureSharedProjectConversation);
     if (!Array.isArray(team.agentArtifacts)) team.agentArtifacts = team.id === "team-demo" ? createSeedAgentArtifacts() : [];
     else {
       const excelArtifacts = team.agentArtifacts.filter((item) => item && item.type === "XLSX");
@@ -205,7 +241,9 @@
       teamState.activeTeamId = team.id;
       persistTeamState();
     }
-    return normalizeTeam(team);
+    const normalized = normalizeTeam(team);
+    persistTeamState();
+    return normalized;
   };
 
   const showTeamToast = (message) => {
@@ -989,7 +1027,8 @@
     const selectedItems = ["Session 摘要"].concat(els("[data-share-item]:checked", el("#team-share-body")).map((input) => input.dataset.shareItem));
     const version = team.sharePackages.filter((item) => item.title === "三季度产品复盘与行动项").length + 1;
     const targetAgent = team.agents[0];
-    const packageItem = { id: `SHR-${Date.now()}`, version, title: "三季度产品复盘与行动项", sourceOwner: "张伟", sharedBy: "张伟", sourceType: "个人 Session", createdAt: "今天 16:42", status: "published", items: selectedItems, targetAgentId: targetAgent.id, targetAgentName: targetAgent.name, continuedBy: null };
+    const packageItem = { id: `SHR-${Date.now()}`, version, title: "三季度产品复盘与行动项", sourceOwner: "张伟", sharedBy: "张伟", sourceType: "个人 Session", createdAt: "今天 16:42", status: "published", items: selectedItems, sourceAgentId: targetAgent.id, sourceAgentName: targetAgent.name, targetAgentId: targetAgent.id, targetAgentName: targetAgent.name, continuedBy: null };
+    ensureSharedProjectConversation(packageItem);
     team.sharePackages.unshift(packageItem);
     selectedItems.filter((item) => /\.(xlsx|md|pptx|html)$/i.test(item)).forEach((name) => {
       if (!team.artifacts.some((artifact) => artifact.name === name)) team.artifacts.unshift({ name, type: name.split(".").pop().toUpperCase(), owner: "张伟", updated: "刚刚" });
@@ -1055,6 +1094,37 @@
     showTeamToast(`已打开 ${agent.name}，接力上下文已带入输入框`);
   };
 
+  const openSharedAgentConversation = (packageId) => {
+    const team = getActiveTeam();
+    const sharePackage = team && team.sharePackages.find((item) => item.id === packageId);
+    if (!team || !sharePackage) return;
+    ensureSharedProjectConversation(sharePackage);
+    persistTeamState();
+    const member = team.members.find((item) => item.id === (sharePackage.relayMemberId || "user-zhangwei") && item.status === "active");
+    const sourceAgent = sharePackage.sourceAgentName || sharePackage.targetAgentName || "销售简报 Agent";
+    const agentUrl = new URL("agent.html", window.location.href);
+    agentUrl.searchParams.set("agent", sourceAgent);
+    agentUrl.searchParams.set("edition", "personal");
+    agentUrl.searchParams.set("workspace", "team");
+    agentUrl.searchParams.set("teamId", team.id);
+    agentUrl.searchParams.set("teamName", team.name);
+    agentUrl.searchParams.set("relayMode", "shared-agent");
+    agentUrl.searchParams.set("relayProject", sharePackage.id);
+    agentUrl.searchParams.set("relayTitle", sharePackage.title);
+    agentUrl.searchParams.set("relayPermission", relayCanEdit(sharePackage) ? "edit" : "read");
+    agentUrl.searchParams.set("relayMember", member?.name || sharePackage.relayMemberName || "当前成员");
+    agentUrl.searchParams.set("sourceMember", sharePackage.sourceOwner || sharePackage.sharedBy || "共享成员");
+    const agentTab = window.open("about:blank", "_blank");
+    if (!agentTab) {
+      showTeamToast("浏览器阻止了新页签，请允许打开共享 Agent 对话后重试");
+      return;
+    }
+    agentTab.opener = null;
+    agentTab.location.replace(agentUrl.href);
+    closeTeamOverlays();
+    showTeamToast(`${sourceAgent} 的共享对话已打开`);
+  };
+
   const continueSharePackage = (packageId) => {
     const team = getActiveTeam();
     const sharePackage = team && team.sharePackages.find((item) => item.id === packageId);
@@ -1064,7 +1134,11 @@
     const agent = team.agents.find((item) => item.id === sharePackage.targetAgentId) || team.agents[0];
     if (!member || !agent) { openRelayPicker(packageId); return; }
     const canEdit = relayCanEdit(sharePackage);
-    openTeamDrawer(canEdit ? "共享项目 · 接力" : "共享项目 · 只读", `<small>${escapeTeamHTML(team.name)} · v${sharePackage.version}</small><h4>${escapeTeamHTML(sharePackage.title)}</h4><div class="drawer-section"><strong>来源与归属</strong><p>${escapeTeamHTML(sharePackage.sourceOwner)} 发布的${escapeTeamHTML(sharePackage.sourceType)}，发布后已成为团队资产。</p></div><div class="drawer-section"><strong>Agent 可用上下文</strong><p>${sharePackage.items.map(escapeTeamHTML).join("　·　")}</p></div><div class="drawer-section"><strong>接力安排</strong><p>接力人：${escapeTeamHTML(member.name)}<br/>接力 Agent：${escapeTeamHTML(agent.name)}<br/>接力权限：${canEdit ? "可编辑" : "只读"}</p><p>${canEdit ? "下一步会先确认要带入 Agent 的上下文，再打开当前团队的 Agent 工作区。" : "仅可查看已共享的上下文与已有产物；不能执行接力、新增或修改产物。"}</p></div><div class="drawer-section"><strong>隐私边界</strong><p>不会读取发布者或接力人的其他私人 Session；如需新增私人资料，必须先显式发布。</p></div>`, `<button class="secondary-btn" data-team-close>取消</button><button class="primary-btn" type="button" data-team-handoff-review="${escapeTeamHTML(sharePackage.id)}" ${canEdit ? "" : 'disabled title="只读权限不能执行接力"'}>${canEdit ? "交给我的 Agent 继续" : "只读 · 不可执行接力"}</button><button class="team-legacy-action" type="button" data-team-continue-confirm="${escapeTeamHTML(sharePackage.id)}" aria-hidden="true" tabindex="-1" ${canEdit ? "" : "disabled"}>确认接力</button>`);
+    const sourceConversation = sharePackage.sourceConversation || {};
+    const sourceAgent = sourceConversation.agentName || sharePackage.sourceAgentName || sharePackage.targetAgentName || "销售简报 Agent";
+    const sourceAction = `<button class="${canEdit ? "secondary-btn" : "primary-btn"}" type="button" data-team-shared-agent-open="${escapeTeamHTML(sharePackage.id)}">查看共享 Agent 对话</button>`;
+    const handoffAction = `<button class="primary-btn" type="button" data-team-handoff-review="${escapeTeamHTML(sharePackage.id)}" ${canEdit ? "" : 'disabled title="只读权限不能交给我的 Agent 执行"'}>${canEdit ? "交给我的 Agent 继续" : "只读 · 不能交给我的 Agent"}</button>`;
+    openTeamDrawer(canEdit ? "共享项目 · 接力" : "共享项目 · 只读", `<small>${escapeTeamHTML(team.name)} · v${sharePackage.version}</small><h4>${escapeTeamHTML(sharePackage.title)}</h4><div class="drawer-section"><strong>来源与归属</strong><p>${escapeTeamHTML(sharePackage.sourceOwner)} 发布的${escapeTeamHTML(sharePackage.sourceType)}，由「${escapeTeamHTML(sourceAgent)}」完成。发布后已成为团队资产。</p></div><div class="drawer-section"><strong>共享 Agent 对话</strong><p>可查看${escapeTeamHTML(sharePackage.sourceOwner)}与「${escapeTeamHTML(sourceAgent)}」在本次 Session 中的完整对话、工具执行记录和共享产物。</p></div><div class="drawer-section"><strong>Agent 可用上下文</strong><p>${sharePackage.items.map(escapeTeamHTML).join("　·　")}</p></div><div class="drawer-section"><strong>接力安排</strong><p>接力人：${escapeTeamHTML(member.name)}<br/>接力 Agent：${escapeTeamHTML(agent.name)}<br/>接力权限：${canEdit ? "可编辑" : "只读"}</p><p>${canEdit ? "可以查看共享 Agent 对话，也可以将项目交给自己的 Agent 继续。" : "仅可查看共享 Agent 对话和已有产物，不能发送新指令或写入新版本。"}</p></div><div class="drawer-section"><strong>隐私边界</strong><p>不会读取发布者或接力人的其他私人 Session；如需新增私人资料，必须先显式发布。</p></div>`, `<button class="secondary-btn" data-team-close>取消</button>${sourceAction}${canEdit ? handoffAction : ""}<button class="team-legacy-action" type="button" data-team-continue-confirm="${escapeTeamHTML(sharePackage.id)}" aria-hidden="true" tabindex="-1" ${canEdit ? "" : "disabled"}>确认接力</button>`);
   };
 
   const openRelayPicker = (packageId) => {
@@ -1469,6 +1543,8 @@
       if (handoffReview) { openRelayHandoffReview(handoffReview.dataset.teamHandoffReview); return; }
       const handoffLaunch = event.target.closest("[data-team-handoff-launch]");
       if (handoffLaunch) { openAgentWorkspaceWithRelay(handoffLaunch.dataset.teamHandoffLaunch); return; }
+      const sharedAgentOpen = event.target.closest("[data-team-shared-agent-open]");
+      if (sharedAgentOpen) { openSharedAgentConversation(sharedAgentOpen.dataset.teamSharedAgentOpen); return; }
       const continueConfirm = event.target.closest("[data-team-continue-confirm]");
       if (continueConfirm) executeContinuation(continueConfirm.dataset.teamContinueConfirm);
       const sharePublish = event.target.closest("#team-share-publish");

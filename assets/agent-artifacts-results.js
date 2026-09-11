@@ -30,7 +30,8 @@ window.ArtifactResults = (() => {
     q('#artifact-result-submit').hidden = false;
     q('#artifact-result-view').hidden = true;
     q('#artifact-result-space').disabled = false;
-    q('#artifact-result-path').textContent = `应用数据 / ${sales(selectedTask) ? '销售简报 Agent' : agentName} / ${files['lead-list'].name}`;
+    const appName = sales(selectedTask) ? '应用A' : '应用B';
+    q('#artifact-result-path').textContent = `应用数据 / ${appName} / ${files['lead-list'].name}`;
     q('#artifact-result-dialog').showModal();
   }
   function submit() {
@@ -38,7 +39,8 @@ window.ArtifactResults = (() => {
     button.disabled = true;
     const space = edition === 'personal' ? 'personal' : q('#artifact-result-space').value;
     const agent = sales(selectedTask) ? '销售简报 Agent' : agentName;
-    const record = { artifact:true,space,agent,folder:AgentArtifacts.folder(space,agent),name:files['lead-list'].name,type:'XLSX',size:sales(selectedTask) ? '86 KB' : '24 KB',count:'-',source:'Agent 产物',state:'已入库',icon:'ico-file',mark:'excel',creator:'张伟',organization:AgentArtifacts.departments[0],version:1,updated:new Date().toLocaleString('sv-SE',{timeZone:'Asia/Shanghai'}).slice(0,16),app:sales(selectedTask)?'sales_weekly':'retail_leads',run:sales(selectedTask)?'run_0906_017':`run_${selectedTask.id}`,snapshot:sales(selectedTask)?'sales_w36_snapshot':`snapshot_${selectedTask.id}`,revision:sales(selectedTask)?'r128':'r1',range:sales(selectedTask)?'2026 年第 36 周 · 华东区域':selectedTask.title,exportConfig:sales(selectedTask)?'sales_excel_v1':'retail_leads_excel_v1',cells:sales(selectedTask)?salesCells:leadCells };
+    const appName = sales(selectedTask) ? '应用A' : '应用B';
+    const record = { artifact:true,space,agent,appName,folder:AgentArtifacts.folder(space,appName),name:files['lead-list'].name,type:'XLSX',size:sales(selectedTask) ? '86 KB' : '24 KB',count:'-',source:agent,state:'已入库',icon:'ico-file',mark:'excel',creator:'张伟',organization:AgentArtifacts.departments[0],version:1,updated:new Date().toLocaleString('sv-SE',{timeZone:'Asia/Shanghai'}).slice(0,16),app:sales(selectedTask)?'sales_weekly':'retail_leads',run:sales(selectedTask)?'run_0906_017':`run_${selectedTask.id}`,snapshot:sales(selectedTask)?'sales_w36_snapshot':`snapshot_${selectedTask.id}`,revision:sales(selectedTask)?'r128':'r1',range:sales(selectedTask)?'2026 年第 36 周 · 华东区域':selectedTask.title,exportConfig:sales(selectedTask)?'sales_excel_v1':'retail_leads_excel_v1',cells:sales(selectedTask)?salesCells:leadCells };
     try {
       const saved = AgentArtifacts.save(record,requestId);
       q('#artifact-result-status').textContent = `已保存「${saved.name}」，下次主动保存将创建另一份独立文件。`;

@@ -30,11 +30,64 @@
     excellent: { id: "excellent", name: "卓越", price: 1998, summary: "录音卡与卓越录音权益" }
   };
 
-  const createSeedAgentArtifacts = () => ([
-    { agent: "销售简报 Agent", name: "第36周-华东销售数据.xlsx", type: "XLSX", owner: "销售简报 Agent", updated: "今天 15:10", cells: [["区域","成交额（元）","销售目标（元）"],["上海","1124870","1190000"],["杭州","867416","965000"],["南京","737049","785000"]] },
-    { agent: "销售简报 Agent", name: "第35周-华东销售数据.xlsx", type: "XLSX", owner: "销售简报 Agent", updated: "上周 15:10", cells: [["区域","成交额（元）","销售目标（元）"],["上海","1081606","1160000"],["杭州","834054","950000"],["南京","708701","770000"]] }
-  ]);
+  const TEAM_APP_DATA_APPS = [{ id: "app-a", name: "应用A" }, { id: "app-b", name: "应用B" }];
+  const TEAM_AGENT_ARTIFACT_SEEDS = [
+    { app: TEAM_APP_DATA_APPS[0], tableName: "airtable1", agent: "销售简报 Agent", updated: "今天 15:10" },
+    { app: TEAM_APP_DATA_APPS[0], tableName: "airtable2", agent: "销售简报 Agent", updated: "今天 15:18" },
+    { app: TEAM_APP_DATA_APPS[1], tableName: "airtable1", agent: "客户洞察 Agent", updated: "昨天 17:20" },
+    { app: TEAM_APP_DATA_APPS[1], tableName: "airtable2", agent: "客户洞察 Agent", updated: "昨天 17:28" }
+  ];
+  const createSeedAgentArtifacts = () => TEAM_AGENT_ARTIFACT_SEEDS.map((seed, index) => ({
+    agent: seed.agent,
+    appId: seed.app.id,
+    appName: seed.app.name,
+    tableName: seed.tableName,
+    name: `${seed.tableName}.xlsx`,
+    type: "XLSX",
+    owner: seed.agent,
+    source: seed.agent,
+    updated: seed.updated,
+    cells: [["区域","成交额（元）","销售目标（元）"],["上海", String(1124870 - index * 42800), String(1190000 - index * 35000)],["杭州", String(867416 - index * 33300), String(965000 - index * 28000)],["南京", String(737049 - index * 28900), String(785000 - index * 24000)]]
+  }));
   const DEMO_SEED_AGENT_ARTIFACT_NAMES = new Set(["第36周-华东销售数据.xlsx", "第35周-华东销售数据.xlsx", "第34周-华东销售数据.xlsx", "第33周-华东销售数据.xlsx"]);
+  const normalizeTeamAgentArtifact = (item, index = 0) => {
+    if (!item) return item;
+    const seed = TEAM_AGENT_ARTIFACT_SEEDS[index % TEAM_AGENT_ARTIFACT_SEEDS.length];
+    const seedLike = DEMO_SEED_AGENT_ARTIFACT_NAMES.has(item.name) && !item.sourceSessionId;
+    if (seedLike) {
+      item.name = `${seed.tableName}.xlsx`;
+      item.agent = seed.agent;
+      item.owner = seed.agent;
+      item.source = seed.agent;
+    }
+    item.appId = item.appId || seed.app.id;
+    item.appName = item.appName || seed.app.name;
+    item.tableName = item.tableName || String(item.name || seed.tableName).replace(/\.[^.]+$/, "");
+    item.source = item.source && item.source !== "Agent 产物" ? item.source : item.agent || item.owner || seed.agent;
+    if (!Array.isArray(item.cells)) item.cells = [["区域", "成交额（元）", "销售目标（元）"], ["上海", "1124870", "1190000"], ["杭州", "867416", "965000"], ["南京", "737049", "785000"]];
+    return item;
+  };
+  const teamAppDataNames = (team) => {
+    const names = new Set((team?.agentArtifacts || []).filter((item) => item && item.type === "XLSX").map((item, index) => normalizeTeamAgentArtifact(item, index).appName));
+    TEAM_APP_DATA_APPS.forEach((app) => names.add(app.name));
+    return [...names];
+  };
+  const ensureDefaultTeamAppData = (team) => {
+    if (!team || team.id !== "team-demo") return;
+    const existing = new Set(team.agentArtifacts
+      .filter((item) => item && item.type === "XLSX" && !item.sourceSessionId)
+      .map((item, index) => {
+        const normalized = normalizeTeamAgentArtifact(item, index);
+        return `${normalized.appName}:${normalized.tableName}`;
+      }));
+    const seedRecords = createSeedAgentArtifacts();
+    const missing = TEAM_AGENT_ARTIFACT_SEEDS
+      .map((seed, index) => ({ seed, record: seedRecords[index] }))
+      .filter(({ seed }) => !existing.has(`${seed.app.name}:${seed.tableName}`))
+      .map(({ record }) => record);
+    if (missing.length) team.agentArtifacts = missing.concat(team.agentArtifacts);
+  };
+  const teamAgentArtifactId = (team, item, index = 0) => `${team.id}-agent-${item.appName || TEAM_AGENT_ARTIFACT_SEEDS[index % TEAM_AGENT_ARTIFACT_SEEDS.length].app.name}-${item.agent || item.owner || ""}-${item.name}`;
   const sharedArtifactType = (name) => {
     const extension = String(name || "").split(".").pop().toLowerCase();
     return extension === "xlsx" || extension === "xls" ? "XLSX" : extension === "md" ? "MD" : extension.toUpperCase() || "FILE";
@@ -84,22 +137,25 @@
     if (!Array.isArray(team.agentArtifacts)) team.agentArtifacts = team.id === "team-demo" ? createSeedAgentArtifacts() : [];
     else {
       const excelArtifacts = team.agentArtifacts.filter((item) => item && item.type === "XLSX");
-      // Older browser state may contain an empty agentArtifacts array after
-      // the app-data migration. Restore the two built-in Excel files for the
-      // demo team while leaving any non-Excel custom artifacts untouched.
+      // Older browser state may contain an empty or partially migrated
+      // agentArtifacts array. Restore the built-in application/table hierarchy
+      // for the demo team while leaving custom artifacts untouched.
       if (team.id === "team-demo" && excelArtifacts.length === 0) {
         team.agentArtifacts = createSeedAgentArtifacts().concat(team.agentArtifacts.filter((item) => item && item.type !== "XLSX"));
-        return team;
+        team.agentArtifacts.forEach(normalizeTeamAgentArtifact);
+        ensureDefaultTeamAppData(team);
       }
-      const customArtifacts = excelArtifacts.filter((item) => !DEMO_SEED_AGENT_ARTIFACT_NAMES.has(item.name) || item.sourceSessionId);
-      const legacySeeds = excelArtifacts
-        .filter((item) => DEMO_SEED_AGENT_ARTIFACT_NAMES.has(item.name) && !item.sourceSessionId)
-        .sort((a, b) => ["第36周-华东销售数据.xlsx", "第35周-华东销售数据.xlsx", "第34周-华东销售数据.xlsx", "第33周-华东销售数据.xlsx"].indexOf(a.name) - ["第36周-华东销售数据.xlsx", "第35周-华东销售数据.xlsx", "第34周-华东销售数据.xlsx", "第33周-华东销售数据.xlsx"].indexOf(b.name))
-        .slice(0, 2);
-      team.agentArtifacts = legacySeeds.concat(customArtifacts);
-      team.agentArtifacts.forEach((item) => {
-        if (!Array.isArray(item.cells)) item.cells = [["区域", "成交额（元）", "销售目标（元）"], ["上海", "1124870", "1190000"], ["杭州", "867416", "965000"], ["南京", "737049", "785000"]];
-      });
+      else {
+        const nonExcelArtifacts = team.agentArtifacts.filter((item) => !item || item.type !== "XLSX");
+        const customArtifacts = excelArtifacts.filter((item) => !DEMO_SEED_AGENT_ARTIFACT_NAMES.has(item.name) || item.sourceSessionId);
+        const legacySeeds = excelArtifacts
+          .filter((item) => DEMO_SEED_AGENT_ARTIFACT_NAMES.has(item.name) && !item.sourceSessionId)
+          .sort((a, b) => ["第36周-华东销售数据.xlsx", "第35周-华东销售数据.xlsx", "第34周-华东销售数据.xlsx", "第33周-华东销售数据.xlsx"].indexOf(a.name) - ["第36周-华东销售数据.xlsx", "第35周-华东销售数据.xlsx", "第34周-华东销售数据.xlsx", "第33周-华东销售数据.xlsx"].indexOf(b.name))
+          .slice(0, TEAM_AGENT_ARTIFACT_SEEDS.length);
+        team.agentArtifacts = legacySeeds.concat(customArtifacts, nonExcelArtifacts.filter(Boolean));
+        team.agentArtifacts.forEach(normalizeTeamAgentArtifact);
+        ensureDefaultTeamAppData(team);
+      }
     }
     if (team.status === "active" && !team.sharePackages.length && !team.artifacts.length && !team.agentArtifacts.length) {
       team.sharePackages = [{
@@ -119,6 +175,8 @@
       ];
       team.agentArtifacts = createSeedAgentArtifacts();
     }
+    team.agentArtifacts.forEach(normalizeTeamAgentArtifact);
+    ensureDefaultTeamAppData(team);
     return team;
   };
 
@@ -388,7 +446,13 @@
   const renderTeamFilesTree = () => {
     const groups = el("#team-files-groups");
     if (groups) {
-      groups.innerHTML = getVisibleTeams().map(teamFileTreeHTML).join("") + [getActiveTeam()].filter(Boolean).map((team) => `<div class="knowledge-tree-node team-only team-app-data-group"><button class="tree-folder-toggle" type="button" data-team-agent-tree-toggle="${escapeTeamHTML(team.id)}" data-team-folder="${escapeTeamHTML(team.id)}" data-knowledge-folder="应用数据" aria-expanded="false"><svg class="icon tree-chevron"><use href="#ico-chevron"/></svg><svg class="icon tree-folder-icon"><use href="#ico-folder"/></svg><span class="tree-folder-name">应用数据</span><span class="tree-count team-system-label">系统</span></button><div class="knowledge-tree-children hide" data-team-agent-children-top="${escapeTeamHTML(team.id)}">${team.agentArtifacts.filter((item) => item.type === "XLSX").map((item) => `<button class="side-sub-item knowledge-leaf" type="button" data-team-folder="${escapeTeamHTML(team.id)}" data-knowledge-folder="${escapeTeamHTML(item.name)}"><svg class="icon"><use href="#ico-file"/></svg><span class="tree-folder-name">${escapeTeamHTML(item.name)}</span></button>`).join("")}</div></div>`).join("");
+      groups.innerHTML = getVisibleTeams().map(teamFileTreeHTML).join("") + [getActiveTeam()].filter(Boolean).map((team) => {
+        const appGroups = teamAppDataNames(team).map((appName) => {
+          const files = team.agentArtifacts.filter((item, index) => normalizeTeamAgentArtifact(item, index).type === "XLSX" && item.appName === appName);
+          return `<div class="knowledge-tree-node team-app-data-app"><button class="tree-folder-toggle" type="button" data-team-agent-app-toggle="${escapeTeamHTML(team.id)}" data-knowledge-folder="${escapeTeamHTML(appName)}" aria-expanded="true"><svg class="icon tree-chevron"><use href="#ico-chevron"/></svg><svg class="icon tree-folder-icon"><use href="#ico-folder"/></svg><span class="tree-folder-name">${escapeTeamHTML(appName)}</span><span class="tree-count">${files.length}</span></button><div class="knowledge-tree-children team-app-data-tables">${files.map((item, index) => `<button class="side-sub-item knowledge-leaf" type="button" data-team-artifact-id="${escapeTeamHTML(teamAgentArtifactId(team, item, index))}" data-team-folder="${escapeTeamHTML(team.id)}" data-knowledge-folder="${escapeTeamHTML(appName)}"><svg class="icon"><use href="#ico-file"/></svg><span class="tree-folder-name">${escapeTeamHTML(item.tableName || item.name.replace(/\\.xlsx$/i, ""))}</span></button>`).join("")}</div></div>`;
+        }).join("");
+        return `<div class="knowledge-tree-node team-only team-app-data-group"><button class="tree-folder-toggle" type="button" data-team-agent-tree-toggle="${escapeTeamHTML(team.id)}" data-team-folder="${escapeTeamHTML(team.id)}" data-knowledge-folder="应用数据" aria-expanded="false"><svg class="icon tree-chevron"><use href="#ico-chevron"/></svg><svg class="icon tree-folder-icon"><use href="#ico-folder"/></svg><span class="tree-folder-name">应用数据</span><span class="tree-count team-system-label">系统</span></button><div class="knowledge-tree-children hide" data-team-agent-children-top="${escapeTeamHTML(team.id)}">${appGroups}</div></div>`;
+      }).join("");
       groups.querySelectorAll("[data-team-file-actions]").forEach((menu) => {
         if (!menu.querySelector('[data-team-file-action="child"]')) menu.insertAdjacentHTML("afterbegin", `<button type="button" data-team-file-action="child" data-team-id="${escapeTeamHTML(menu.dataset.teamFileActions)}"><svg class="icon"><use href="#ico-plus"/></svg>新建下级目录</button><button type="button" data-team-file-action="rename" data-team-id="${escapeTeamHTML(menu.dataset.teamFileActions)}"><svg class="icon"><use href="#ico-file"/></svg>重命名</button>`);
       });
@@ -518,12 +582,32 @@
   const teamKnowledgeRows = (team, folderName) => {
     if (team.fileFolders.some((folder) => folder.name === folderName)) return [];
     const isRoot = !folderName || folderName === teamFilesRootName(team);
+    const appNames = teamAppDataNames(team);
+    const appDataRoot = ["应用数据", "Agent 产物"].includes(folderName);
+    const appDataApp = appNames.includes(folderName);
     const includeShared = isRoot || folderName === "团队共享" || folderName === "团队共享项目";
     const includeArtifacts = isRoot || folderName === "团队产物";
-    const includeAgentArtifacts = isRoot || ["应用数据", "Agent 产物"].includes(folderName) || team.agentArtifacts.some((item) => item.name === folderName);
+    const includeAgentArtifacts = isRoot || appDataApp;
     const selectedAgentArtifacts = includeAgentArtifacts ? team.agentArtifacts.filter((item) => {
-      const inFolder = isRoot || ["应用数据", "Agent 产物"].includes(folderName) || item.name === folderName;
-      return inFolder && (!folderName || folderName !== "应用数据" || item.type === "XLSX");
+      normalizeTeamAgentArtifact(item);
+      const inFolder = isRoot || item.appName === folderName;
+      return inFolder && item.type === "XLSX";
+    }) : [];
+    const appRows = appDataRoot ? appNames.map((appName) => {
+      const count = team.agentArtifacts.filter((item, index) => normalizeTeamAgentArtifact(item, index).type === "XLSX" && item.appName === appName).length;
+      return {
+        id: `${team.id}-app-${appName}`,
+        kind: "app",
+        name: appName,
+        meta: `${count} 张表 · Agent 执行时可调用`,
+        size: "-",
+        count,
+        type: "应用",
+        source: "系统",
+        state: "可调用",
+        updated: count ? "刚刚" : "-",
+        icon: "ico-folder"
+      };
     }) : [];
     const sharedRows = includeShared ? team.sharePackages.map((item) => ({
       id: item.id,
@@ -556,20 +640,21 @@
       icon: "ico-file"
     })) : [];
     const agentRows = selectedAgentArtifacts.map((item) => ({
-      id: `${team.id}-agent-${item.agent}-${item.name}`,
+      id: teamAgentArtifactId(team, item),
       kind: "agent",
       name: item.name,
-      meta: `${item.agent} 生成 · ${item.type}`,
+      meta: `${item.appName} · ${item.agent} 生成 · ${item.type}`,
       size: "-",
       count: "-",
       type: item.type,
-      source: "Agent 产物",
+      source: item.agent || item.source,
       state: "已生成",
       updated: item.updated,
       icon: "ico-agent",
-      agent: item.agent
+      agent: item.agent,
+      appName: item.appName
     }));
-    return sharedRows.concat(artifactRows, agentRows);
+    return appRows.concat(sharedRows, artifactRows, agentRows);
   };
 
   const renderTeamKnowledgeFiles = (team, folderName) => {
@@ -580,7 +665,7 @@
     const rows = teamKnowledgeRows(team, folderName);
     tableHead.dataset.schema = "team";
     const sharedProjectView = folderName === "团队共享项目" || folderName === "团队共享";
-    const appDataView = !sharedProjectView && (folderName === "应用数据" || folderName === "Agent 产物");
+    const appDataView = !sharedProjectView && (folderName === "应用数据" || folderName === "Agent 产物" || teamAppDataNames(team).includes(folderName));
     list.closest(".knowledge-content")?.classList.toggle("team-shared-project-content", sharedProjectView);
     list.closest(".knowledge-content")?.classList.toggle("team-app-data-content", appDataView);
     const labels = sharedProjectView ? ["", "项目名称", "共享人", "类型", "状态", "更新时间", "操作"] : appDataView ? ["", "名称", "类型", "来源", "状态", "更新时间", "操作"] : ["", "名称", "大小", "数量", "类型", "来源", "状态", "更新时间", "操作"];
@@ -593,6 +678,7 @@
       const sharedActions = `<button class="team-icon-action danger" type="button" data-team-shared-delete aria-label="删除${escapeTeamHTML(item.name)}" title="删除"><svg class="icon"><use href="#ico-trash"/></svg></button><button class="team-shared-text-action" type="button" data-team-continue="${escapeTeamHTML(item.id)}" aria-label="设置并接力${escapeTeamHTML(item.name)}">接力</button>`;
       if (sharedProjectView && item.kind === "share") return `<div class="knowledge-file-row team-knowledge-row team-shared-project-row" data-schema="file" role="button" tabindex="0" data-team-knowledge-kind="share" data-team-knowledge-id="${escapeTeamHTML(item.id)}"><span><input class="knowledge-check" type="checkbox" aria-label="选择${escapeTeamHTML(item.name)}" /></span><span class="knowledge-file-name"><span class="knowledge-file-mark team"><svg class="icon"><use href="#${escapeTeamHTML(item.icon)}"/></svg></span><span><strong>${escapeTeamHTML(item.name)}</strong><small>v${escapeTeamHTML(item.version || 1)} · ${escapeTeamHTML(item.count || 0)} 项上下文${item.relayMemberName ? ` · 接力人：${escapeTeamHTML(item.relayMemberName)}（${item.relayPermissionLabel}）` : ""}</small></span></span><span>${escapeTeamHTML(item.sharedBy)}</span><span>${escapeTeamHTML(item.type)}</span><span class="knowledge-state${item.state === "可接力" ? " pending" : ""}"><i></i>${escapeTeamHTML(item.state)}</span><span>${escapeTeamHTML(item.updated)}</span><span class="knowledge-row-action">${sharedActions}</span></div>`;
       const artifactActions = `<button class="team-text-action" type="button" data-team-version-history aria-label="查看${escapeTeamHTML(item.name)}版本记录">版本记录</button>${item.type === "XLSX" ? `<button class="team-text-action" type="button" data-team-knowledge-edit aria-label="编辑${escapeTeamHTML(item.name)}">编辑</button>` : ""}<button class="team-icon-action danger" type="button" data-team-knowledge-delete aria-label="删除${escapeTeamHTML(item.name)}" title="删除"><svg class="icon"><use href="#ico-trash"/></svg></button>`;
+      if (appDataView && item.kind === "app") return `<div class="knowledge-file-row team-knowledge-row team-app-data-row" data-schema="file" role="button" tabindex="0" data-team-knowledge-kind="app" data-team-knowledge-id="${escapeTeamHTML(item.id)}" data-team-app-name="${escapeTeamHTML(item.name)}"><span></span><span class="knowledge-file-name"><span class="knowledge-file-mark team"><svg class="icon"><use href="#ico-folder"/></svg></span><span><strong>${escapeTeamHTML(item.name)}</strong><small>${escapeTeamHTML(item.meta)}</small></span></span><span>${escapeTeamHTML(item.type)}</span><span>${escapeTeamHTML(item.source)}</span><span class="knowledge-state"><i></i>${escapeTeamHTML(item.state)}</span><span>${escapeTeamHTML(item.updated)}</span><span class="knowledge-row-action"><button class="team-text-action" type="button" data-team-open-app="${escapeTeamHTML(item.name)}">打开</button></span></div>`;
       if (appDataView) return `<div class="knowledge-file-row team-knowledge-row team-app-data-row" data-schema="file" role="button" tabindex="0" data-team-knowledge-kind="${escapeTeamHTML(item.kind)}" data-team-knowledge-id="${escapeTeamHTML(item.id)}"><span><input class="knowledge-check" type="checkbox" aria-label="选择${escapeTeamHTML(item.name)}" /></span><span class="knowledge-file-name"><span class="knowledge-file-mark team"><svg class="icon"><use href="#${escapeTeamHTML(item.icon)}"/></svg></span><span><strong>${escapeTeamHTML(item.name)}</strong><small>${escapeTeamHTML(item.meta)}</small></span></span><span>${escapeTeamHTML(item.type)}</span><span>${escapeTeamHTML(item.agent || item.source)}</span><span class="knowledge-state${item.state === "可接力" ? " pending" : ""}"><i></i>${escapeTeamHTML(item.state)}</span><span>${escapeTeamHTML(item.updated)}</span><span class="knowledge-row-action">${item.kind === "agent" ? artifactActions : `<button type="button" data-team-knowledge-preview aria-label="打开${escapeTeamHTML(item.name)}"><svg class="icon"><use href="#ico-file"/></svg></button>`}</span></div>`;
       return `<div class="knowledge-file-row team-knowledge-row" data-schema="file" role="button" tabindex="0" data-team-knowledge-kind="${escapeTeamHTML(item.kind)}" data-team-knowledge-id="${escapeTeamHTML(item.id)}"><span><input class="knowledge-check" type="checkbox" aria-label="选择${escapeTeamHTML(item.name)}" /></span><span class="knowledge-file-name"><span class="knowledge-file-mark team"><svg class="icon"><use href="#${escapeTeamHTML(item.icon)}"/></svg></span><span><strong>${escapeTeamHTML(item.name)}</strong><small>${escapeTeamHTML(item.meta)}</small></span></span><span>${escapeTeamHTML(item.size)}</span><span>${escapeTeamHTML(item.count)}</span><span>${escapeTeamHTML(item.type)}</span><span>${escapeTeamHTML(item.source)}</span><span class="knowledge-state${item.state === "可接力" ? " pending" : ""}"><i></i>${escapeTeamHTML(item.state)}</span><span>${escapeTeamHTML(item.updated)}</span><span class="knowledge-row-action">${item.kind === "agent" ? `<button class="team-icon-action" type="button" data-team-version-history aria-label="查看${escapeTeamHTML(item.name)}版本记录" title="版本记录"><svg class="icon"><use href="#ico-clock"/></svg></button>${item.type === "XLSX" ? `<button class="team-icon-action" type="button" data-team-knowledge-edit aria-label="编辑${escapeTeamHTML(item.name)}" title="编辑"><svg class="icon"><use href="#ico-edit"/></svg></button>` : ""}<button class="team-icon-action danger" type="button" data-team-knowledge-delete aria-label="删除${escapeTeamHTML(item.name)}" title="删除"><svg class="icon"><use href="#ico-trash"/></svg></button>` : item.kind === "share" ? `<button type="button" data-team-continue="${escapeTeamHTML(item.id)}" aria-label="接力${escapeTeamHTML(item.name)}"><svg class="icon"><use href="#ico-agent"/></svg></button>` : `<button type="button" data-team-knowledge-preview aria-label="打开${escapeTeamHTML(item.name)}"><svg class="icon"><use href="#ico-file"/></svg></button>`}</span></div>`;
     }).join("");
@@ -636,8 +722,9 @@
     const primary = el("#knowledge-primary-label");
     if (titleNode) titleNode.textContent = title;
     if (crumb) crumb.textContent = title;
-    if (meta) meta.textContent = title === "团队共享项目" ? "成员共享的项目快照，可设置接力人并交给 Agent 继续" : title === "团队共享" ? "成员显式发布的 Session 快照，可交给你的 Agent 继续" : title === "团队产物" ? "团队成员协作生成的 Excel、PPT、HTML、MD 等文件" : title === "应用数据" ? "团队 Agent 生成的结构化文件与网页产物" : title.includes("Agent") ? `由「${title}」生成并保存的团队 Agent 产物。` : "团队成员共享的 Session、资料与 Agent 产物";
-    if (primary) primary.textContent = title === "应用数据" ? "上传应用数据" : title.includes("Agent") ? "上传Agent产物" : "上传团队文件";
+    const appDataApp = teamAppDataNames(team).includes(title);
+    if (meta) meta.textContent = title === "团队共享项目" ? "成员共享的项目快照，可设置接力人并交给 Agent 继续" : title === "团队共享" ? "成员显式发布的 Session 快照，可交给你的 Agent 继续" : title === "团队产物" ? "团队成员协作生成的 Excel、PPT、HTML、MD 等文件" : title === "应用数据" ? "按应用组织团队 Agent 可调用的数据表；每个应用下可包含一张或多张表。" : appDataApp ? `「${title}」下的表可被 Agent 执行时调用，支持预览与编辑。` : title.includes("Agent") ? `由「${title}」生成并保存的团队 Agent 产物。` : "团队成员共享的 Session、资料与 Agent 产物";
+    if (primary) primary.textContent = title === "应用数据" || appDataApp ? "上传应用数据" : title.includes("Agent") ? "上传Agent产物" : "上传团队文件";
     if (team.fileFolders.some((folder) => folder.name === title)) {
       if (meta) meta.textContent = `${teamFilesRootName(team)}下的团队目录`;
       if (primary) primary.textContent = "上传团队文件";
@@ -1226,12 +1313,19 @@
     sharePackage.continuedAt = nowISO();
     sharePackage.status = "continued";
     const timestamp = new Date().toLocaleString("sv-SE", { timeZone: "Asia/Shanghai" }).slice(0, 16);
+    const outputApp = targetAgent.id === "insight-agent" ? TEAM_APP_DATA_APPS[1] : TEAM_APP_DATA_APPS[0];
+    const outputTableName = `${sharePackage.title}-接力记录`;
     let output = team.agentArtifacts.find((artifact) => artifact.sourceSessionId === packageId && artifact.type === "XLSX");
     if (!output) {
-      output = { name: `${sharePackage.title}-接力记录.xlsx`, type: "XLSX", sourceSessionId: packageId, version: 0, history: [] };
+      output = { name: `${outputTableName}.xlsx`, type: "XLSX", appId: outputApp.id, appName: outputApp.name, tableName: outputTableName, sourceSessionId: packageId, version: 0, history: [] };
       team.agentArtifacts.unshift(output);
     }
+    output.appId = output.appId || outputApp.id;
+    output.appName = output.appName || outputApp.name;
+    output.tableName = output.tableName || outputTableName;
+    output.name = output.name || `${output.tableName}.xlsx`;
     output.agent = targetAgent.name;
+    output.source = targetAgent.name;
     output.owner = member.name;
     output.updated = timestamp;
     output.version = (output.version || 0) + 1;
@@ -1446,6 +1540,42 @@
         const collapsed = children?.classList.toggle("hide");
         teamAgentToggle.setAttribute("aria-expanded", String(!collapsed));
       }
+      const teamAgentAppToggle = event.target.closest("[data-team-agent-app-toggle]");
+      if (teamAgentAppToggle) {
+        event.preventDefault();
+        event.stopPropagation();
+        const team = teamState.teams.find((item) => item.id === teamAgentAppToggle.dataset.teamAgentAppToggle);
+        if (team) {
+          teamState.activeTeamId = team.id;
+          persistTeamState();
+          renderWorkspaceSwitcher();
+          openTeamKnowledgeFolder(team, teamAgentAppToggle.dataset.knowledgeFolder, teamAgentAppToggle);
+        }
+        const children = teamAgentAppToggle.parentElement?.querySelector(":scope > .knowledge-tree-children");
+        const collapsed = children?.classList.toggle("hide");
+        teamAgentAppToggle.setAttribute("aria-expanded", String(!collapsed));
+        return;
+      }
+      const teamArtifactLeaf = event.target.closest("[data-team-artifact-id]");
+      if (teamArtifactLeaf) {
+        event.preventDefault();
+        event.stopPropagation();
+        const team = teamState.teams.find((item) => item.id === teamArtifactLeaf.dataset.teamFolder);
+        const artifact = team?.agentArtifacts.find((item, index) => teamAgentArtifactId(team, normalizeTeamAgentArtifact(item, index), index) === teamArtifactLeaf.dataset.teamArtifactId);
+        if (team && artifact) {
+          teamState.activeTeamId = team.id;
+          persistTeamState();
+          renderWorkspaceSwitcher();
+          openTeamKnowledgeFolder(team, artifact.appName, teamArtifactLeaf);
+          if (typeof window.BaizhiOpenKnowledgePreview === "function") {
+            artifact.artifact = true;
+            artifact.space = "personal";
+            artifact.folder = `artifacts:personal:${artifact.appName}`;
+            window.BaizhiOpenKnowledgePreview(artifact);
+          }
+        }
+        return;
+      }
       const teamFolder = event.target.closest("[data-team-folder]");
       if (teamFolder) {
         event.preventDefault();
@@ -1460,7 +1590,7 @@
         event.stopPropagation();
         const row = versionHistory.closest(".team-knowledge-row");
         const team = getActiveTeam();
-      const item = team?.agentArtifacts.find((entry) => row && row.dataset.teamKnowledgeId === `${team.id}-agent-${entry.agent}-${entry.name}`);
+        const item = team?.agentArtifacts.find((entry, index) => row && row.dataset.teamKnowledgeId === teamAgentArtifactId(team, normalizeTeamAgentArtifact(entry, index), index));
         if (item) {
           const history = Array.isArray(item.history) && item.history.length ? item.history : [
             { version: item.version || 1, agent: item.agent, time: item.updated, action: "生成并保存到应用数据" }
@@ -1476,11 +1606,11 @@
         event.stopPropagation();
         const row = editArtifact.closest(".team-knowledge-row");
         const team = getActiveTeam();
-        const item = team?.agentArtifacts.find((entry) => row && row.dataset.teamKnowledgeId === `${team.id}-agent-${entry.agent}-${entry.name}`);
+        const item = team?.agentArtifacts.find((entry, index) => row && row.dataset.teamKnowledgeId === teamAgentArtifactId(team, normalizeTeamAgentArtifact(entry, index), index));
         if (item && item.type === "XLSX" && typeof window.BaizhiOpenKnowledgePreview === "function") {
           item.artifact = true;
           item.space = "personal";
-          item.folder = "artifacts:personal";
+          item.folder = `artifacts:personal:${item.appName}`;
           window.BaizhiOpenKnowledgePreview(item);
         }
         return;
@@ -1491,7 +1621,7 @@
         event.stopPropagation();
         const row = deleteArtifact.closest(".team-knowledge-row");
         const team = getActiveTeam();
-        const item = team?.agentArtifacts.find((entry) => row && row.dataset.teamKnowledgeId === `${team.id}-agent-${entry.agent}-${entry.name}`);
+        const item = team?.agentArtifacts.find((entry, index) => row && row.dataset.teamKnowledgeId === teamAgentArtifactId(team, normalizeTeamAgentArtifact(entry, index), index));
         if (item) openTeamDrawer("删除应用数据", `<small>${escapeTeamHTML(team.name)} · 应用数据</small><h4>确认删除「${escapeTeamHTML(item.name)}」？</h4><div class="drawer-section"><p>删除后该 Excel 将从团队应用数据列表移除，其他成员也将无法继续引用。</p></div>`, `<button class="secondary-btn" data-team-close>取消</button><button class="danger-btn" data-team-knowledge-delete-confirm="${escapeTeamHTML(row.dataset.teamKnowledgeId)}">确认删除</button>`);
         return;
       }
@@ -1502,13 +1632,15 @@
         if (row && team) {
           const share = team.sharePackages.find((item) => item.id === row.dataset.teamKnowledgeId);
           const artifact = team.artifacts.find((item, index) => `${team.id}-artifact-${index}` === row.dataset.teamKnowledgeId);
-          const agentArtifact = team.agentArtifacts.find((item) => row.dataset.teamKnowledgeId === `${team.id}-agent-${item.agent}-${item.name}`);
+          const appName = row.dataset.teamAppName;
+          const agentArtifact = team.agentArtifacts.find((item, index) => row.dataset.teamKnowledgeId === teamAgentArtifactId(team, normalizeTeamAgentArtifact(item, index), index));
           if (share) continueSharePackage(share.id);
+          else if (appName) openTeamKnowledgeFolder(team, appName, row);
           else if (artifact) openTeamDrawer("团队产物", `<small>${escapeTeamHTML(team.name)} · ${escapeTeamHTML(artifact.type)}</small><h4>${escapeTeamHTML(artifact.name)}</h4><div class="drawer-section"><strong>归属</strong><p>${escapeTeamHTML(artifact.owner)} 沉淀到团队文件，成员退出后仍由团队保留。</p></div><div class="drawer-section"><strong>可用方式</strong><p>可作为团队 Agent 的上下文继续引用，消耗团队 Credits。</p></div>`, `<button class="secondary-btn" data-toast="团队文件链接已复制">复制链接</button><button class="primary-btn" data-toast="已引用到团队 Agent">引用给 Agent</button>`);
           else if (agentArtifact && typeof window.BaizhiOpenKnowledgePreview === "function") {
             agentArtifact.artifact = true;
             agentArtifact.space = "personal";
-            agentArtifact.folder = "artifacts:personal";
+            agentArtifact.folder = `artifacts:personal:${agentArtifact.appName}`;
             window.BaizhiOpenKnowledgePreview(agentArtifact);
           }
         }
@@ -1530,7 +1662,7 @@
         const team = getActiveTeam();
         const id = deleteConfirm.dataset.teamKnowledgeDeleteConfirm;
         if (team) {
-          team.agentArtifacts = team.agentArtifacts.filter((entry) => `${team.id}-agent-${entry.agent}-${entry.name}` !== id);
+          team.agentArtifacts = team.agentArtifacts.filter((entry, index) => teamAgentArtifactId(team, normalizeTeamAgentArtifact(entry, index), index) !== id);
           persistTeamState();
           renderTeamFilesTree();
           renderTeamKnowledgeFiles(team, activeKnowledgeFolder || "应用数据");

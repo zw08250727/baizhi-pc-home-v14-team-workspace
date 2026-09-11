@@ -8,6 +8,7 @@ window.ArtifactUI = (() => {
   const imported = new Set();
   const scope = () => activeKnowledgeFolder.startsWith('artifacts:enterprise') || enterpriseKnowledgeFolders.has(activeKnowledgeFolder) ? 'enterprise' : 'personal';
   const isArtifact = () => activeKnowledgeFolder.startsWith('artifacts:');
+  const artifactAppName = () => activeKnowledgeFolder.split(':')[2] || '';
   const closePreview = () => { if (guard(closePreview)) return; q('#knowledge-preview').hidden = true; q('.knowledge-workspace').classList.remove('file-open'); current = null; renderKnowledgeFiles(); };
   function guard(action) {
     if (!editing) return false;
@@ -74,18 +75,27 @@ window.ArtifactUI = (() => {
   }
   function row(item, index) {
     const folder = item.preview === 'folder';
+    if (isArtifact() && folder) {
+      return `<div class="knowledge-file-row artifact-app-data-row artifact-app-folder-row" role="button" tabindex="0" data-schema="file" data-knowledge-index="${index}"><span></span><span class="knowledge-file-name"><span class="knowledge-file-mark"><svg class="icon"><use href="#ico-folder"/></svg></span><span><strong>${esc(item.name)}</strong><small>${esc(item.meta || 'Agent 可调用的应用数据集合')}</small></span></span><span>应用</span><span>${esc(item.source || '系统')}</span><span>${knowledgeStateHTML(item.state || '可调用')}</span><span>${esc(item.updated || '—')}</span><span class="artifact-actions"><button type="button" class="artifact-text-action">打开</button></span></div>`;
+    }
     if (isArtifact() && item.artifact && !folder) {
       const sourceAgent = item.agent || item.source || '销售简报 Agent';
       const artifactActions = `<button type="button" class="artifact-text-action" data-toast="正在打开 ${esc(item.name)} 的版本记录">版本记录</button><button type="button" class="artifact-text-action" data-knowledge-row-action="edit">编辑</button><button type="button" class="file-trash-button" data-knowledge-row-action="delete" title="删除" aria-label="删除 ${esc(item.name)}"><svg class="icon" aria-hidden="true"><use href="#ico-trash"/></svg></button>`;
-      return `<div class="knowledge-file-row artifact-app-data-row" role="button" tabindex="0" data-schema="file" data-knowledge-index="${index}"><span><input class="knowledge-check" type="checkbox" aria-label="选择${esc(item.name)}"></span><span class="knowledge-file-name"><span class="knowledge-file-mark"><svg class="icon"><use href="#ico-file"/></svg></span><span><strong>${esc(item.name)}</strong><small>${esc(item.meta || `${sourceAgent} 生成 · ${item.type}`)}</small></span></span><span>${esc(item.type)}</span><span>${esc(sourceAgent)}</span><span>${knowledgeStateHTML(item.state || '已生成')}</span><span>${esc(item.updated || '—')}</span><span class="artifact-actions">${artifactActions}</span></div>`;
+      return `<div class="knowledge-file-row artifact-app-data-row" role="button" tabindex="0" data-schema="file" data-knowledge-index="${index}"><span><input class="knowledge-check" type="checkbox" aria-label="选择${esc(item.name)}"></span><span class="knowledge-file-name"><span class="knowledge-file-mark"><svg class="icon"><use href="#ico-file"/></svg></span><span><strong>${esc(item.name)}</strong><small>${esc(item.meta || `${item.appName || '应用数据'} · ${sourceAgent} 生成 · ${item.type}`)}</small></span></span><span>${esc(item.type)}</span><span>${esc(sourceAgent)}</span><span>${knowledgeStateHTML(item.state || '已生成')}</span><span>${esc(item.updated || '—')}</span><span class="artifact-actions">${artifactActions}</span></div>`;
     }
     return `<div class="knowledge-file-row" role="button" tabindex="0" data-schema="file" data-knowledge-index="${index}"><span>${item.system || folder ? '' : `<input class="knowledge-check" type="checkbox" aria-label="选择${esc(item.name)}">`}</span><span class="knowledge-file-name"><span class="knowledge-file-mark"><svg class="icon"><use href="#${folder ? 'ico-folder' : 'ico-file'}"/></svg></span><strong>${esc(item.name)}</strong></span><span>${esc(item.type)}</span><span>${esc(item.size)}</span><span>${folder ? '—' : knowledgeStateHTML(item.state)}${item.state === '解析失败' ? '<button class="artifact-retry" data-artifact-retry>重试解析</button>' : ''}</span><span class="artifact-creator"><span>${esc(item.creator || '—')}</span><small title="${esc(item.organization)}">${esc(item.organization || '—')}</small></span><span>${folder ? '—' : esc(item.updated)}</span><span class="artifact-actions">${KnowledgeFileActions.actions(item)}</span></div>`;
   }
   function matches(item) {
-    if (item.artifact || item.system) { if (item.system ? item.folder !== activeKnowledgeFolder : !(activeKnowledgeFolder.startsWith('artifacts:') && item.space === scope())) return false; }
+    if (item.system) { if (item.folder !== activeKnowledgeFolder) return false; }
+    else if (item.artifact) {
+      if (!activeKnowledgeFolder.startsWith('artifacts:') || item.space !== scope()) return false;
+      const appName = artifactAppName();
+      if (!appName) return false;
+      if ((item.appName || model.appFor(item).name) !== appName) return false;
+    }
     else if (isArtifact() || (item.folder && item.folder !== activeKnowledgeFolder)) return false;
     const department = q('#artifact-department').value;
-    return scope() !== 'enterprise' || department === 'all' || (item.system ? knowledgeCatalog.file.some(x => x.artifact && x.space === scope() && (!item.agent || x.agent === item.agent) && x.organization === department) : (item.organization || model.departments[0]) === department);
+    return scope() !== 'enterprise' || department === 'all' || (item.system ? knowledgeCatalog.file.some(x => x.artifact && x.space === scope() && (!item.appName || x.appName === item.appName) && x.organization === department) : (item.organization || model.departments[0]) === department);
   }
   function configureFolder() {
     const artifact = isArtifact(), parts = activeKnowledgeFolder.split(':');
@@ -94,25 +104,35 @@ window.ArtifactUI = (() => {
     q('#artifact-department').value = 'all';
     if (artifact) {
       q('#knowledge-folder-title').textContent = parts[2] || '应用数据';
-      q('#knowledge-folder-meta').textContent = parts[2] === '销售简报 Agent' ? model.description : parts[2] ? `由「${parts[2]}」生成并保存的独立表格文件。` : '';
+      q('#knowledge-folder-meta').textContent = parts[2] ? `「${parts[2]}」下的表可被 Agent 执行时调用，支持预览与编辑。` : '按应用组织 Agent 可调用的数据表；每个应用下可包含一张或多张表。';
     }
     q('#knowledge-type-filter-wrap').hidden = false;
-    const selected = document.querySelector(`[data-artifact-folder="${CSS.escape(activeKnowledgeFolder)}"]`);
+    const selected = [...document.querySelectorAll('[data-artifact-folder]')].find(x => x.dataset.artifactFolder === activeKnowledgeFolder);
     document.querySelectorAll('[data-artifact-folder]').forEach(x => x.classList.toggle('active', x === selected));
     if (selected) { let parent = selected.parentElement; while (parent && parent.id !== 'knowledge-side-list') { parent.classList.remove('hide'); if (parent.classList.contains('knowledge-tree-children')) parent.parentElement.querySelector(':scope > .tree-folder-toggle')?.setAttribute('aria-expanded','true'); parent = parent.parentElement; } }
     current = null;
   }
-  function folderItem(space, agent = '') {
-    return { id:`system-${space}-${agent}`,system:true,space,agent,name:agent || '应用数据',folder:agent ? model.folder(space) : space === 'personal' ? '我的文件' : '企业文件',folderKey:model.folder(space,agent),type:'文件夹',preview:'folder',size:'—',count:'—',source:'Agent 产物',state:'',updated:'',icon:'ico-folder' };
+  function folderItem(space, appName = '') {
+    const count = appName ? knowledgeCatalog.file.filter(x => x.artifact && x.space === space && x.appName === appName).length : 0;
+    return { id:`system-${space}-${appName || 'root'}`,system:true,space,appName,name:appName || '应用数据',folder:appName ? model.folder(space) : space === 'personal' ? '我的文件' : '企业文件',folderKey:model.folder(space,appName),type:'文件夹',preview:'folder',size:'—',count,source:appName ? '应用数据' : 'Agent 产物',state:appName ? '可调用' : '',updated:'',icon:'ico-folder',meta:appName ? `${count} 张表 · Agent 执行时可调用` : '按应用分组的结构化数据' };
   }
   function sync() {
     model.read().forEach(record => { if (!imported.has(record.id)) { imported.add(record.id); knowledgeCatalog.file.push(record); } });
+    knowledgeCatalog.file.forEach((record, index) => { if (record.artifact) Object.assign(record, model.normalize(record, index)); });
     ['personal','enterprise'].forEach(space => {
-      const agents = [...new Set(knowledgeCatalog.file.filter(x => x.artifact && x.space === space).map(x => x.agent))];
-      if (!agents.includes('销售简报 Agent')) agents.unshift('销售简报 Agent');
-      [folderItem(space), ...agents.map(agent => folderItem(space, agent))].forEach(item => { if (!knowledgeCatalog.file.some(x => x.id === item.id)) knowledgeCatalog.file.push(item); });
-      const files = knowledgeCatalog.file.filter(x => x.artifact && x.space === space && x.type === 'XLSX').slice(0, 3);
-      q(`#artifact-tree-${space}`).innerHTML = `<div class="knowledge-tree-node artifact-tree-group"><button class="tree-folder-toggle artifact-root" data-artifact-folder="${model.folder(space)}" aria-expanded="true"><svg class="icon tree-chevron"><use href="#ico-chevron"/></svg><svg class="icon tree-folder-icon"><use href="#ico-folder"/></svg><span class="tree-folder-name">应用数据</span><span class="artifact-system">${files.length}</span></button><div class="knowledge-tree-children artifact-tree-children">${files.map(item => `<button class="side-sub-item knowledge-leaf artifact-leaf" data-artifact-folder="${esc(model.folder(space))}"><svg class="icon"><use href="#ico-file"/></svg><span class="tree-folder-name">${esc(item.name)}</span></button>`).join('')}</div></div>`;
+      const appNames = [...new Set(knowledgeCatalog.file.filter(x => x.artifact && x.space === space).map(x => x.appName))];
+      model.apps.forEach(app => { if (!appNames.includes(app.name)) appNames.push(app.name); });
+      [folderItem(space), ...appNames.map(appName => folderItem(space, appName))].forEach(item => {
+        const existing = knowledgeCatalog.file.find(x => x.id === item.id);
+        if (existing) Object.assign(existing, item);
+        else knowledgeCatalog.file.push(item);
+      });
+      const appGroups = appNames.map(appName => {
+        const files = knowledgeCatalog.file.filter(x => x.artifact && x.space === space && x.appName === appName && x.type === 'XLSX');
+        return `<div class="knowledge-tree-node artifact-app-group"><button class="tree-folder-toggle artifact-app" data-artifact-folder="${esc(model.folder(space, appName))}" aria-expanded="true"><svg class="icon tree-chevron"><use href="#ico-chevron"/></svg><svg class="icon tree-folder-icon"><use href="#ico-folder"/></svg><span class="tree-folder-name">${esc(appName)}</span><span class="artifact-system">${files.length}</span></button><div class="knowledge-tree-children artifact-table-children">${files.map(item => `<button class="side-sub-item knowledge-leaf artifact-leaf artifact-table-leaf" data-artifact-folder="${esc(model.folder(space, appName))}" data-artifact-file="${esc(item.id)}"><svg class="icon"><use href="#ico-file"/></svg><span class="tree-folder-name">${esc(item.tableName || item.name.replace(/\\.xlsx$/i,''))}</span></button>`).join('')}</div></div>`;
+      }).join('');
+      const tableCount = knowledgeCatalog.file.filter(x => x.artifact && x.space === space && x.type === 'XLSX').length;
+      q(`#artifact-tree-${space}`).innerHTML = `<div class="knowledge-tree-node artifact-tree-group"><button class="tree-folder-toggle artifact-root" data-artifact-folder="${model.folder(space)}" aria-expanded="true"><svg class="icon tree-chevron"><use href="#ico-chevron"/></svg><svg class="icon tree-folder-icon"><use href="#ico-folder"/></svg><span class="tree-folder-name">应用数据</span><span class="artifact-system">${tableCount}</span></button><div class="knowledge-tree-children artifact-tree-children">${appGroups}</div></div>`;
     });
   }
   function init() {
@@ -129,7 +149,24 @@ window.ArtifactUI = (() => {
     q('#artifact-save-leave').onclick = () => finishLeave(true);
     q('#artifact-leave').addEventListener('cancel', event => { event.preventDefault(); cancelLeave(); });
     q('#knowledge-preview-body').addEventListener('input', event => { if (!editing) return; if (event.target.dataset.artifactCell) { const [r,c] = event.target.dataset.artifactCell.split(':').map(Number); editing.cells[r][c] = event.target.value; } else if(event.target.id === 'artifact-word') editing.text = event.target.value; });
-    q('#knowledge-side-list').addEventListener('click', event => { const button = event.target.closest('[data-artifact-folder]'); if (!button) return; if (button.classList.contains('artifact-root')) { const children = button.parentElement.querySelector(':scope > .artifact-tree-children'); const collapsed = children?.classList.toggle('hide'); button.setAttribute('aria-expanded', String(!collapsed)); event.preventDefault(); return; } openKnowledgeFolder(button.dataset.artifactFolder, button); });
+    q('#knowledge-side-list').addEventListener('click', event => {
+      const button = event.target.closest('[data-artifact-folder]');
+      if (!button) return;
+      event.preventDefault();
+      if (button.classList.contains('artifact-root') || button.classList.contains('artifact-app')) {
+        const children = button.parentElement.querySelector(':scope > .knowledge-tree-children');
+        const collapsed = children?.classList.toggle('hide');
+        button.setAttribute('aria-expanded', String(!collapsed));
+        openKnowledgeFolder(button.dataset.artifactFolder, button);
+        return;
+      }
+      if (button.dataset.artifactFile) {
+        const item = knowledgeCatalog.file.find(entry => entry.id === button.dataset.artifactFile);
+        if (item) { openKnowledgeFolder(item.folder, button); window.BaizhiOpenKnowledgePreview?.(item); }
+        return;
+      }
+      openKnowledgeFolder(button.dataset.artifactFolder, button);
+    });
     q('#knowledge-file-list').addEventListener('keydown', event => { if (event.target.matches('[data-knowledge-index]') && ['Enter',' '].includes(event.key)) { event.preventDefault(); event.target.click(); } });
     // Catch navigation at the interaction boundary before legacy listeners mutate state.
     // Function guards above remain authoritative for programmatic navigation.

@@ -41,7 +41,7 @@ window.KnowledgeFileActions = (() => {
     if (items.some(x=>x.artifact) && !artifacts) { showToast('请分别操作普通文件与 Agent 产物');return; }
     transfer={action,items,artifacts};
     q('#file-transfer-title').textContent = artifacts ? '复制到企业应用数据' : action === 'copy' ? '复制文件' : '移动文件';
-    q('#file-transfer-copy').textContent = artifacts ? `将 ${items.length} 个文件复制到企业文件 / 应用数据 / 对应 Agent。保留个人原文件，复制当前已保存的内容，不重新读取 Apps；同名自动编号。` : `已选择 ${items.length} 个文件。请选择${items[0].space === 'enterprise' ? '企业文件' : '我的文件'}下的目标目录。${action === 'copy' ? '原文件保留，同名自动编号。' : '移动后原目录不再展示该文件。'}`;
+    q('#file-transfer-copy').textContent = artifacts ? `将 ${items.length} 个文件复制到企业文件 / 应用数据 / 对应应用。保留个人原文件，复制当前已保存的内容，不重新读取 Apps；同名自动编号。` : `已选择 ${items.length} 个文件。请选择${items[0].space === 'enterprise' ? '企业文件' : '我的文件'}下的目标目录。${action === 'copy' ? '原文件保留，同名自动编号。' : '移动后原目录不再展示该文件。'}`;
     q('#file-transfer-target-wrap').hidden = artifacts;
     q('#file-transfer-target').innerHTML = [...folders].filter(([key,space])=>space===items[0].space && items.every(x=>x.folder!==key)).map(([key])=>`<option value="${esc(key)}">${esc(key)}</option>`).join('');
     q('#file-transfer-submit').disabled = !artifacts && !q('#file-transfer-target').options.length;
@@ -57,7 +57,7 @@ window.KnowledgeFileActions = (() => {
     const {action,items,artifacts}=transfer,target=q('#file-transfer-target').value;
     if(!items.every(item=>knowledgeCatalog.file.includes(item)&&allowed(item).includes(action)) || (!artifacts && (!folders.has(target)||folders.get(target)!==items[0].space||items.some(x=>x.folder===target)))) {q('#file-transfer-error').textContent='目标或文件状态已改变，请重新选择。';return;}
     for(const item of items) {
-      const folder=artifacts ? AgentArtifacts.folder('enterprise',item.agent) : target;
+      const folder=artifacts ? AgentArtifacts.folder('enterprise',item.appName || AgentArtifacts.appFor(item).name) : target;
       if(action==='copy') {
         const copy=structuredClone(item);copy.id=crypto.randomUUID();copy.folder=folder;copy.space=artifacts?'enterprise':item.space;
         copy.name=uniqueName(copy,folder);copy.creator='张伟';copy.organization=AgentArtifacts.departments[0];copy.updated=new Date().toLocaleString('sv-SE',{timeZone:'Asia/Shanghai'}).slice(0,16);copy.version=1;copy.copiedFrom=item.id;

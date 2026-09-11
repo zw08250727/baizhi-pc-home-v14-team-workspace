@@ -2504,12 +2504,12 @@
     }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
   </style>
-  <link rel="stylesheet" href="assets/team-workspace.css" />
-  <link rel="stylesheet" href="assets/agent-artifacts.css" />
-  <link rel="stylesheet" href="assets/monochrome-theme.css" />
-  <script src="assets/agent-artifacts-model.js"></script>
-  <script src="assets/agent-artifacts-ui.js"></script>
-  <script src="assets/knowledge-file-actions.js"></script>
+  <link rel="stylesheet" href="assets/team-workspace.css?v=app-data-hierarchy" />
+  <link rel="stylesheet" href="assets/agent-artifacts.css?v=app-data-hierarchy" />
+  <link rel="stylesheet" href="assets/monochrome-theme.css?v=app-data-hierarchy" />
+  <script src="assets/agent-artifacts-model.js?v=app-data-hierarchy"></script>
+  <script src="assets/agent-artifacts-ui.js?v=app-data-hierarchy"></script>
+  <script src="assets/knowledge-file-actions.js?v=app-data-hierarchy"></script>
 </head>
 <body>
   <section class="edition-gate" id="edition-gate" aria-labelledby="edition-gate-title">
@@ -3975,6 +3975,6 @@
     if (["all", "scheduled", "shared"].includes(previewHistoryTab)) $(`[data-history-tab="${previewHistoryTab}"]`)?.click();
     if (previewSpaceMenu === "1" && previewEdition !== "personal") { $("#space-menu").classList.add("show"); $("#space-switcher").setAttribute("aria-expanded", "true"); }
   </script>
-  <script src="assets/team-workspace.js?v=settings-nav-2"></script>
+  <script src="assets/team-workspace.js?v=app-data-hierarchy"></script>
 </body>
 </html>

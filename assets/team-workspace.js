@@ -172,7 +172,12 @@
   // Existing demo projects retain their editable behavior until a permission is selected.
   const relayCanEdit = (project) => project.relayPermission == null || project.relayPermission === "edit";
   const relayPermissionHelp = "只读：进入共享人的 Agent 对话，仅可查看完整对话、工具记录与已有产物。\n可编辑：既可查看共享 Agent 对话，也可交给自己的 Agent 继续下达指令并生成新版本。\n权限只作用于本次项目接力，不改变源文件原有权限。";
-  const relayPermissionField = (canEdit) => `<label class="field-label team-label-with-help" for="team-relay-permission"><span>接力权限</span><span class="team-help-tip" tabindex="0" role="note" aria-label="${escapeTeamHTML(relayPermissionHelp)}" data-help="${escapeTeamHTML(relayPermissionHelp)}">?</span></label><select class="field-input" id="team-relay-permission"><option value="read" ${canEdit ? "" : "selected"}>只读</option><option value="edit" ${canEdit ? "selected" : ""}>可编辑</option></select>`;
+  const relayPermissionField = (canEdit, packageId) => `<label class="field-label team-label-with-help" for="team-relay-permission"><span>接力权限</span><span class="team-help-tip" tabindex="0" role="note" aria-label="${escapeTeamHTML(relayPermissionHelp)}" data-help="${escapeTeamHTML(relayPermissionHelp)}">?</span></label><select class="field-input" id="team-relay-permission" data-team-relay-package="${escapeTeamHTML(packageId || "")}"><option value="read" ${canEdit ? "" : "selected"}>只读</option><option value="edit" ${canEdit ? "selected" : ""}>可编辑</option></select>`;
+  const relayDrawerActionsHTML = (packageId, canEdit) => {
+    const sourceAction = `<button class="${canEdit ? "secondary-btn" : "primary-btn"}" type="button" data-team-relay-view-source="${escapeTeamHTML(packageId)}">查看共享 Agent 对话</button>`;
+    const handoffAction = canEdit ? `<button class="primary-btn" type="button" data-team-relay-handoff="${escapeTeamHTML(packageId)}">交给我的 Agent 继续</button>` : "";
+    return `<button class="secondary-btn" data-team-close>取消</button>${sourceAction}${handoffAction}<button class="team-legacy-action" type="button" data-team-continue-confirm="${escapeTeamHTML(packageId)}" aria-hidden="true" tabindex="-1" ${canEdit ? "" : "disabled"}>确认接力</button>`;
+  };
   const getActiveTeam = () => getVisibleTeams().find((team) => team.id === teamState.activeTeamId) || getVisibleTeams()[0] || null;
   const getOwnedTeams = () => getVisibleTeams().filter((team) => team.ownerId === "user-zhangwei" || team.role === "owner");
   const canCreateTeam = () => getOwnedTeams().length < 3;
@@ -497,6 +502,14 @@
     if (sharedHistory) {
       const title = el(".history-text", sharedHistory);
       if (title) title.textContent = latest ? latest.title : "暂无团队共享 Session";
+      const time = el(".history-time", sharedHistory);
+      if (time) time.textContent = latest ? (relayCanEdit(latest) ? "接力共享" : "只读共享") : "暂无共享";
+      const action = el("[data-team-shared-open]", sharedHistory);
+      if (action) {
+        action.textContent = latest ? (relayCanEdit(latest) ? "打开并接力" : "查看共享") : "暂无共享";
+        action.setAttribute("aria-label", latest ? (relayCanEdit(latest) ? "打开并接力共享 Session" : "查看只读共享 Session") : "暂无共享 Session");
+        action.disabled = !latest;
+      }
     }
     const count = el("#team-files-count");
     if (count) count.textContent = String(team.artifacts.length + team.agentArtifacts.length);
@@ -1146,9 +1159,7 @@
       const required = index === 0 || item === "Session 摘要";
       return `<label class="team-handoff-context-item"><input type="checkbox" data-team-handoff-item="${escapeTeamHTML(item)}" ${required ? "checked disabled" : "checked"} /><span><strong>${escapeTeamHTML(item)}</strong><small>${required ? "接力必带上下文" : "发布时已授权，可选择带入"}</small></span><em>${required ? "必带" : "可选"}</em></label>`;
     }).join("");
-    const sourceAction = `<button class="${canEdit ? "secondary-btn" : "primary-btn"}" type="button" data-team-relay-view-source="${escapeTeamHTML(sharePackage.id)}">查看共享 Agent 对话</button>`;
-    const handoffAction = `<button class="primary-btn" type="button" data-team-relay-handoff="${escapeTeamHTML(sharePackage.id)}" ${canEdit ? "" : 'disabled title="只读权限不能交给我的 Agent 执行"'}>交给我的 Agent 继续</button>`;
-    openTeamDrawer("设置并接力", `<small>${escapeTeamHTML(team.name)} · 团队共享项目 · v${escapeTeamHTML(sharePackage.version)}</small><h4>${escapeTeamHTML(sharePackage.title)}</h4><div class="drawer-section"><p>在这里一次完成接力人、接力 Agent 和权限设置。点击下方动作时会先保存设置，再进入对应的接力流程。</p><label class="field-label" for="team-relay-member">接力人</label><select class="field-input" id="team-relay-member">${memberOptions}</select><label class="field-label" for="team-relay-agent">接力 Agent</label><select class="field-input" id="team-relay-agent" aria-describedby="team-relay-agent-hint">${agentOptions}</select><p id="team-relay-agent-hint" class="team-relay-hint">接力人使用的团队 AI，将读取本项目已共享的上下文与产物继续处理。</p>${relayPermissionField(canEdit)}<p id="team-relay-error" class="team-folder-error" role="alert"></p></div><div class="drawer-section"><strong>来源与归属</strong><p>${escapeTeamHTML(sharePackage.sourceOwner)} 发布的${escapeTeamHTML(sharePackage.sourceType)}，由「${escapeTeamHTML(sourceAgent)}」完成。发布后已成为团队资产。</p></div><div class="drawer-section team-handoff-section"><div class="team-handoff-section-head"><strong>带入 Agent 的上下文</strong><span>${contextItems.length} 项</span></div><div class="team-handoff-context-list">${contextHTML}</div></div><div class="drawer-section"><strong>隐私边界</strong><p>不会读取发布者或接力人的其他私人 Session；如需新增私人资料，必须先显式发布。</p></div>`, `<button class="secondary-btn" data-team-close>取消</button>${sourceAction}${handoffAction}<button class="team-legacy-action" type="button" data-team-continue-confirm="${escapeTeamHTML(sharePackage.id)}" aria-hidden="true" tabindex="-1" ${canEdit ? "" : "disabled"}>确认接力</button>`);
+    openTeamDrawer("设置并接力", `<small>${escapeTeamHTML(team.name)} · 团队共享项目 · v${escapeTeamHTML(sharePackage.version)}</small><h4>${escapeTeamHTML(sharePackage.title)}</h4><div class="drawer-section"><p>在这里一次完成接力人、接力 Agent 和权限设置。点击下方动作时会先保存设置，再进入对应的接力流程。</p><label class="field-label" for="team-relay-member">接力人</label><select class="field-input" id="team-relay-member">${memberOptions}</select><label class="field-label" for="team-relay-agent">接力 Agent</label><select class="field-input" id="team-relay-agent" aria-describedby="team-relay-agent-hint">${agentOptions}</select><p id="team-relay-agent-hint" class="team-relay-hint">接力人使用的团队 AI，将读取本项目已共享的上下文与产物继续处理。</p>${relayPermissionField(canEdit, sharePackage.id)}<p id="team-relay-error" class="team-folder-error" role="alert"></p></div><div class="drawer-section"><strong>来源与归属</strong><p>${escapeTeamHTML(sharePackage.sourceOwner)} 发布的${escapeTeamHTML(sharePackage.sourceType)}，由「${escapeTeamHTML(sourceAgent)}」完成。发布后已成为团队资产。</p></div><div class="drawer-section team-handoff-section"><div class="team-handoff-section-head"><strong>带入 Agent 的上下文</strong><span>${contextItems.length} 项</span></div><div class="team-handoff-context-list">${contextHTML}</div></div><div class="drawer-section"><strong>隐私边界</strong><p>不会读取发布者或接力人的其他私人 Session；如需新增私人资料，必须先显式发布。</p></div>`, relayDrawerActionsHTML(sharePackage.id, canEdit));
   };
 
   const openRelayPicker = (packageId) => {
@@ -1160,7 +1171,7 @@
     const canEdit = relayCanEdit(sharePackage);
     const memberOptions = members.map((member) => `<option value="${escapeTeamHTML(member.id)}" ${member.id === (sharePackage.relayMemberId || "user-zhangwei") ? "selected" : ""}>${escapeTeamHTML(member.name)}</option>`).join("");
     const agentOptions = team.agents.map((agent) => `<option value="${escapeTeamHTML(agent.id)}" ${agent.id === sharePackage.targetAgentId ? "selected" : ""}>${escapeTeamHTML(agent.name)}</option>`).join("");
-    openTeamDrawer("设置接力人", `<small>${escapeTeamHTML(team.name)} · 团队共享项目</small><h4>${escapeTeamHTML(sharePackage.title)}</h4><div class="drawer-section"><p>指定负责接力的团队成员，以及继续处理项目的团队 Agent。保存后不会立即执行。</p><label class="field-label" for="team-relay-member">接力人</label><select class="field-input" id="team-relay-member">${memberOptions}</select><label class="field-label" for="team-relay-agent">接力 Agent</label><select class="field-input" id="team-relay-agent" aria-describedby="team-relay-agent-hint">${agentOptions}</select><p id="team-relay-agent-hint" class="team-relay-hint">接力人使用的团队 AI，将读取本项目已共享的上下文与产物继续处理。</p>${relayPermissionField(canEdit)}<p id="team-relay-error" class="team-folder-error" role="alert"></p></div>`, `<button class="secondary-btn" data-team-close>取消</button><button class="primary-btn" type="button" data-team-relay-save="${escapeTeamHTML(packageId)}" ${!members.length || !team.agents.length ? "disabled" : ""}>保存设置</button>`);
+    openTeamDrawer("设置接力人", `<small>${escapeTeamHTML(team.name)} · 团队共享项目</small><h4>${escapeTeamHTML(sharePackage.title)}</h4><div class="drawer-section"><p>指定负责接力的团队成员，以及继续处理项目的团队 Agent。保存后不会立即执行。</p><label class="field-label" for="team-relay-member">接力人</label><select class="field-input" id="team-relay-member">${memberOptions}</select><label class="field-label" for="team-relay-agent">接力 Agent</label><select class="field-input" id="team-relay-agent" aria-describedby="team-relay-agent-hint">${agentOptions}</select><p id="team-relay-agent-hint" class="team-relay-hint">接力人使用的团队 AI，将读取本项目已共享的上下文与产物继续处理。</p>${relayPermissionField(canEdit, packageId)}<p id="team-relay-error" class="team-folder-error" role="alert"></p></div>`, `<button class="secondary-btn" data-team-close>取消</button><button class="primary-btn" type="button" data-team-relay-save="${escapeTeamHTML(packageId)}" ${!members.length || !team.agents.length ? "disabled" : ""}>保存设置</button>`);
   };
 
   const refreshSharedProjects = (team) => {
@@ -1169,6 +1180,7 @@
     el(`[data-team-tree-toggle="${team.id}"]`)?.setAttribute("aria-expanded", "true");
     const trigger = el(`[data-team-folder="${team.id}"][data-knowledge-folder="团队共享项目"]`);
     openTeamKnowledgeFolder(team, "团队共享项目", trigger);
+    renderTeamHome();
     el("#knowledge-selection-bar")?.classList.remove("show");
   };
 
@@ -1289,14 +1301,13 @@
 
   const handleSettingsInteraction = (event) => {
     if (event.type === "change" && event.target.closest("#team-relay-permission")) {
-      const canEdit = event.target.value === "edit";
-      const handoff = el("[data-team-relay-handoff]", el("#drawer-actions"));
-      const legacy = el("[data-team-continue-confirm]", el("#drawer-actions"));
-      if (handoff) {
-        handoff.disabled = !canEdit;
-        handoff.title = canEdit ? "" : "只读权限不能交给我的 Agent 执行";
+      const permissionSelect = event.target.closest("#team-relay-permission");
+      const canEdit = permissionSelect.value === "edit";
+      const drawerActions = el("#drawer-actions");
+      const packageId = permissionSelect.dataset.teamRelayPackage;
+      if (drawerActions && packageId && el("[data-team-relay-view-source]", drawerActions)) {
+        drawerActions.innerHTML = relayDrawerActionsHTML(packageId, canEdit);
       }
-      if (legacy) legacy.disabled = !canEdit;
       return;
     }
     const nav = event.target.closest("[data-team-settings-nav]");

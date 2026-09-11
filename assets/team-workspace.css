@@ -191,6 +191,54 @@ body[data-workspace="team"] .team-shared-project-content > .team-shared-project-
 .team-folder-dialog .close-btn { width: 36px; height: 36px; }
 .team-folder-dialog button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 .drawer-body .team-relay-hint { margin: 8px 0 18px; color: var(--muted); font-size: 12px; line-height: 1.65; }
+.drawer-body .team-label-with-help {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.team-help-tip {
+  position: relative;
+  display: inline-grid;
+  width: 16px;
+  height: 16px;
+  place-items: center;
+  border: 1px solid #cfd4dc;
+  border-radius: 50%;
+  color: #626a75;
+  background: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: help;
+}
+.team-help-tip::after {
+  position: absolute;
+  z-index: 35;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  width: 304px;
+  padding: 10px 12px;
+  border: 1px solid #d9dde4;
+  border-radius: 10px;
+  color: #3f4650;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(17, 17, 17, .12);
+  content: attr(data-help);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.65;
+  opacity: 0;
+  pointer-events: none;
+  text-align: left;
+  transform: translate(-50%, 4px);
+  transition: opacity .14s ease, transform .14s ease;
+  white-space: pre-line;
+}
+.team-help-tip:hover::after,
+.team-help-tip:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
 [data-team-continue-confirm]:disabled { opacity: .5; cursor: not-allowed; }
 .team-legacy-action {
   position: fixed; top: 0; left: 0; width: 1px; height: 1px; margin: 0; padding: 0;

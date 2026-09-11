@@ -116,7 +116,7 @@ body[data-workspace="team"] .team-file-group .team-agent-group { display: none !
 .team-knowledge-row .knowledge-row-action .team-icon-action.danger:hover { color: #d9535f; background: #fff0f1; }
 .knowledge-workspace .knowledge-table-head[data-schema="team"].team-shared-project-head,
 .knowledge-workspace .knowledge-file-row[data-schema="file"].team-shared-project-row {
-  grid-template-columns: 34px minmax(240px,1fr) 90px 90px 84px 126px 188px;
+  grid-template-columns: 34px minmax(240px,1fr) 90px 90px 84px 126px 120px;
   column-gap: 16px;
   padding-inline: 22px;
 }
@@ -126,7 +126,7 @@ body[data-workspace="team"] .team-file-group .team-agent-group { display: none !
 .team-shared-project-row .knowledge-row-action { gap: 6px; }
 body[data-workspace="team"] .team-shared-project-content { overflow-x: auto; }
 body[data-workspace="team"] .team-shared-project-content > .team-shared-project-head,
-body[data-workspace="team"] .team-shared-project-content > .team-shared-project-list { min-width: 992px; }
+body[data-workspace="team"] .team-shared-project-content > .team-shared-project-list { min-width: 924px; }
 .team-shared-project-row .knowledge-row-action .team-icon-action { width: 36px; height: 36px; flex: 0 0 36px; }
 .team-shared-project-row .knowledge-row-action .team-icon-action:focus-visible { outline: 2px solid var(--blue); }
 .team-shared-project-row .knowledge-row-action .team-shared-text-action {

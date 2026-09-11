@@ -65,6 +65,8 @@ const storageKey = 'baizhi-v14-team-workspace';
     assert.equal(await page.locator('#team-relay-permission').inputValue(), 'edit');
     assert.match(await page.locator('#drawer-body').innerText(), /点击下方动作时会先保存设置/);
     assert.match(await page.locator('#drawer-body').innerText(), /带入 Agent 的上下文/);
+    assert.doesNotMatch(await page.locator('#drawer-body').innerText(), /来源与归属/);
+    assert.doesNotMatch(await page.locator('#drawer-body').innerText(), /隐私边界/);
     assert.equal(await page.locator('#team-relay-permission-hint').count(), 0);
     assert.match(await page.locator('.team-help-tip').getAttribute('data-help'), /只读：进入共享人的 Agent 对话/);
     assert.doesNotMatch(await page.locator('#drawer-body').innerText(), /权限只作用于本次项目接力/);

@@ -349,6 +349,13 @@ textarea {
   background: #eeeeee !important;
 }
 
+.team-shared-project-row .knowledge-row-action .team-shared-text-action:hover {
+  color: #111 !important;
+  background: transparent !important;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .team-knowledge-row .knowledge-row-action button,
 .team-shared-project-row .knowledge-row-action button,
 .team-folder-dialog button,

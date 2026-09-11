@@ -32,6 +32,8 @@ const storageKey = 'baizhi-v14-team-workspace';
     assert.equal(await rows.count(), 1);
     assert.deepEqual(await page.locator('#knowledge-table-head > span').allTextContents(), ['', '项目名称', '共享人', '类型', '状态', '更新时间', '操作']);
     assert.match(await rows.first().innerText(), /4 项上下文/);
+    assert.equal(await rows.first().locator('[data-team-set-relay]').innerText(), '设置接力人');
+    assert.equal(await rows.first().locator('[data-team-continue]').innerText(), '接力');
     await checkAlignment();
     if (process.env.SCREENSHOT_DIR) await page.screenshot({ animations: 'disabled', path: `${process.env.SCREENSHOT_DIR}/shared-projects-desktop.png` });
     await page.setViewportSize({ width: 1080, height: 680 });

@@ -526,7 +526,7 @@
 
     const history = el("#history-task-list");
     if (history && !el('[data-team-shared-history="true"]')) {
-      history.insertAdjacentHTML("afterbegin", '<div class="history-row team-only team-flex" data-history-type="shared" data-team-shared-history="true"><svg class="icon"><use href="#ico-users"/></svg><span class="history-text">竞品分析与首页方案复盘</span><span class="history-time">可接力</span><button class="team-inline-share" type="button" data-team-shared-open aria-label="打开共享 Session">打开并接力</button></div>');
+      history.insertAdjacentHTML("afterbegin", '<div class="history-row team-only team-flex" data-history-type="shared" data-team-shared-history="true"><svg class="icon"><use href="#ico-users"/></svg><span class="history-text">竞品分析与首页方案复盘</span><span class="history-time">可接力</span><button class="team-inline-share" type="button" data-team-shared-open aria-label="打开共享项目">接力项目</button></div>');
     }
     const firstHistory = el(".history-row[data-history-type='normal']");
     if (firstHistory && !el(".team-inline-share", firstHistory)) {
@@ -565,13 +565,13 @@
     const sharedHistory = el('[data-team-shared-history="true"]');
     if (sharedHistory) {
       const title = el(".history-text", sharedHistory);
-      if (title) title.textContent = latest ? latest.title : "暂无团队共享 Session";
+      if (title) title.textContent = latest ? latest.title : "暂无共享项目";
       const time = el(".history-time", sharedHistory);
       if (time) time.textContent = latest ? (relayCanEdit(latest) ? "接力共享" : "只读共享") : "暂无共享";
       const action = el("[data-team-shared-open]", sharedHistory);
       if (action) {
-        action.textContent = latest ? (relayCanEdit(latest) ? "打开并接力" : "查看共享") : "暂无共享";
-        action.setAttribute("aria-label", latest ? (relayCanEdit(latest) ? "打开并接力共享 Session" : "查看只读共享 Session") : "暂无共享 Session");
+        action.textContent = latest ? (relayCanEdit(latest) ? "接力项目" : "查看项目") : "暂无项目";
+        action.setAttribute("aria-label", latest ? (relayCanEdit(latest) ? "接力共享项目" : "查看只读共享项目") : "暂无共享项目");
         action.disabled = !latest;
       }
     }

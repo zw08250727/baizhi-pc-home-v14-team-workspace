@@ -8,8 +8,7 @@
   - v13 的个人版、企业版、会议、知识库、录音与 AI 能力保持可回归。
 
   v13 继承假设：
-  - 自动任务不是独立产品模块，而是历史任务的一种筛选状态。
-  - 共享任务与普通历史任务属于同一信息对象，通过 Tab 切换而非分区重复展示。
+  - 左侧底部展示 Project 列表；自动执行与共享接力是项目状态筛选，Session/任务作为项目下的执行过程。
   - 录音卡只保留顶部全局引导，会议工作区内不重复放置硬件入口。
   - 参考 WorkBuddy「专家是角色、Skill 是能力」的模型，把企业智能体与技能市场归到单一一级入口「AI 专家」。
   - v9 保持不变，本文件重设计专家卡片形象，以统一的企业级职业肖像替代临时图标。
@@ -20,7 +19,7 @@
   - Web 端只提供开始录音；闪念仅展示移动端同步内容，不提供 Web 创建与音频上传入口。
   - 三类内容统一沿用我的会议列表 UI；侧栏不再展示邀请成员卡片。
   - 桌面端引导采用带工作台预览的产品卡，并继续复用现有下载弹窗。
-  - 原型首次进入先选择企业版或个人版；个人版不显示任何企业空间、企业文件、企业会议和共享任务。
+  - 原型首次进入先选择企业版或个人版；个人版不显示任何企业空间、企业文件、企业会议和共享项目。
 -->
 <html lang="zh-CN">
 <head>
@@ -2522,7 +2521,7 @@
           <span class="edition-choice-icon"><svg class="icon"><use href="#ico-users"/></svg></span>
           <h2>企业版</h2>
           <p>在企业空间内使用共享会议、企业文件与组织能力。</p>
-          <ul><li>企业会议与经营洞察</li><li>企业文件与权限范围</li><li>共享任务与团队协作</li></ul>
+          <ul><li>企业会议与经营洞察</li><li>企业文件与权限范围</li><li>共享项目与团队协作</li></ul>
           <span class="edition-choice-action">进入企业版</span>
         </button>
         <button class="edition-choice personal" type="button" data-edition-choice="personal">
@@ -2631,18 +2630,18 @@
           <section class="side-group capability-hub"><button class="side-group-head" id="capability-entry" data-main-target="capabilities" aria-current="false"><span class="side-group-title"><svg class="icon"><use href="#ico-agent"/></svg><span class="side-group-label">AI专家· 技能·连接器</span></span></button></section>
         </div>
         <section class="history-section" aria-labelledby="history-task-title">
-          <div class="history-title" id="history-task-title">历史任务</div>
-          <div class="history-tabs" role="tablist" aria-label="历史任务分类">
+          <div class="history-title" id="history-task-title">项目</div>
+          <div class="history-tabs" role="tablist" aria-label="项目分类">
             <button class="history-tab active" id="history-tab-all" type="button" role="tab" aria-selected="true" aria-controls="history-task-list" data-history-tab="all">全部</button>
-            <button class="history-tab" id="history-tab-scheduled" type="button" role="tab" aria-selected="false" aria-controls="history-task-list" data-history-tab="scheduled">已定时</button>
-            <button class="history-tab edition-enterprise-only" id="history-tab-shared" type="button" role="tab" aria-selected="false" aria-controls="history-task-list" data-history-tab="shared">共享任务</button>
+            <button class="history-tab" id="history-tab-scheduled" type="button" role="tab" aria-selected="false" aria-controls="history-task-list" data-history-tab="scheduled">自动项目</button>
+            <button class="history-tab edition-enterprise-only" id="history-tab-shared" type="button" role="tab" aria-selected="false" aria-controls="history-task-list" data-history-tab="shared">共享项目</button>
           </div>
           <div class="history" id="history-task-list" role="tabpanel" aria-live="polite">
-            <div class="history-row" data-history-type="normal"><svg class="icon"><use href="#ico-chat"/></svg><span class="history-text">三季度产品复盘会议</span><span class="history-time">今天</span></div>
-            <div class="history-row" data-history-type="scheduled"><svg class="icon"><use href="#ico-clock"/></svg><span class="history-text">整理研发周报并生成行动项</span><span class="history-time">09:00</span></div>
-            <div class="history-row" data-history-type="normal"><svg class="icon"><use href="#ico-chat"/></svg><span class="history-text">钉钉机器人会话</span><span class="history-time">昨天</span></div>
-            <div class="history-row" data-history-type="scheduled"><svg class="icon"><use href="#ico-clock"/></svg><span class="history-text">生成经营分析报告</span><span class="history-time">周五</span></div>
-            <div class="history-shared-guide edition-enterprise-only" id="history-shared-guide" hidden><span class="history-shared-guide-mark"><svg class="icon"><use href="#ico-desktop"/></svg></span><strong>在桌面端查看共享任务</strong><p>续接团队会话、同步任务进度，并按权限共同编辑。</p><button type="button" id="history-shared-download"><svg class="icon"><use href="#ico-download"/></svg>下载桌面端</button></div>
+            <div class="history-row" data-history-type="normal"><svg class="icon"><use href="#ico-chat"/></svg><span class="history-text">三季度产品复盘项目</span><span class="history-time">今天</span></div>
+            <div class="history-row" data-history-type="scheduled"><svg class="icon"><use href="#ico-clock"/></svg><span class="history-text">研发周报自动整理</span><span class="history-time">09:00</span></div>
+            <div class="history-row" data-history-type="normal"><svg class="icon"><use href="#ico-chat"/></svg><span class="history-text">客户服务机器人优化</span><span class="history-time">昨天</span></div>
+            <div class="history-row" data-history-type="scheduled"><svg class="icon"><use href="#ico-clock"/></svg><span class="history-text">经营分析周报项目</span><span class="history-time">周五</span></div>
+            <div class="history-shared-guide edition-enterprise-only" id="history-shared-guide" hidden><span class="history-shared-guide-mark"><svg class="icon"><use href="#ico-desktop"/></svg></span><strong>在桌面端查看共享项目</strong><p>续接项目会话、同步项目进度，并按权限共同编辑。</p><button type="button" id="history-shared-download"><svg class="icon"><use href="#ico-download"/></svg>下载桌面端</button></div>
           </div>
         </section>
       </div>
@@ -3570,7 +3569,7 @@
       $("#history-shared-guide").hidden = filter !== "shared";
       $("#history-task-list").setAttribute("aria-labelledby", tab.id);
     }));
-    $$(".history-row").forEach((row) => row.addEventListener("click", () => showToast(`正在打开「${$(".history-text", row).textContent}」`)));
+    $$(".history-row").forEach((row) => row.addEventListener("click", () => showToast(`正在打开项目「${$(".history-text", row).textContent}」`)));
     $("#history-shared-download").addEventListener("click", () => openModal("#download-modal"));
     const composerShell = $(".composer");
     const toolMenu = $("#tool-menu");
@@ -3975,6 +3974,6 @@
     if (["all", "scheduled", "shared"].includes(previewHistoryTab)) $(`[data-history-tab="${previewHistoryTab}"]`)?.click();
     if (previewSpaceMenu === "1" && previewEdition !== "personal") { $("#space-menu").classList.add("show"); $("#space-switcher").setAttribute("aria-expanded", "true"); }
   </script>
-  <script src="assets/team-workspace.js?v=app-data-hierarchy"></script>
+  <script src="assets/team-workspace.js?v=project-list"></script>
 </body>
 </html>

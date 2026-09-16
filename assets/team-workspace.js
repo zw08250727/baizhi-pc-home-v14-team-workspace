@@ -446,13 +446,13 @@
   const renderTeamFilesTree = () => {
     const groups = el("#team-files-groups");
     if (groups) {
-      groups.innerHTML = getVisibleTeams().map(teamFileTreeHTML).join("") + [getActiveTeam()].filter(Boolean).map((team) => {
+      groups.innerHTML = getVisibleTeams().map(teamFileTreeHTML).join("") + (window.APP_DATA_MODE ? "" : [getActiveTeam()].filter(Boolean).map((team) => {
         const appGroups = teamAppDataNames(team).map((appName) => {
           const files = team.agentArtifacts.filter((item, index) => normalizeTeamAgentArtifact(item, index).type === "XLSX" && item.appName === appName);
           return `<div class="knowledge-tree-node team-app-data-app"><button class="tree-folder-toggle" type="button" data-team-agent-app-toggle="${escapeTeamHTML(team.id)}" data-knowledge-folder="${escapeTeamHTML(appName)}" aria-expanded="true"><svg class="icon tree-chevron"><use href="#ico-chevron"/></svg><svg class="icon tree-folder-icon"><use href="#ico-folder"/></svg><span class="tree-folder-name">${escapeTeamHTML(appName)}</span><span class="tree-count">${files.length}</span></button><div class="knowledge-tree-children team-app-data-tables">${files.map((item, index) => `<button class="side-sub-item knowledge-leaf" type="button" data-team-artifact-id="${escapeTeamHTML(teamAgentArtifactId(team, item, index))}" data-team-folder="${escapeTeamHTML(team.id)}" data-knowledge-folder="${escapeTeamHTML(appName)}"><svg class="icon"><use href="#ico-file"/></svg><span class="tree-folder-name">${escapeTeamHTML(item.tableName || item.name.replace(/\\.xlsx$/i, ""))}</span></button>`).join("")}</div></div>`;
         }).join("");
         return `<div class="knowledge-tree-node team-only team-app-data-group"><button class="tree-folder-toggle" type="button" data-team-agent-tree-toggle="${escapeTeamHTML(team.id)}" data-team-folder="${escapeTeamHTML(team.id)}" data-knowledge-folder="应用数据" aria-expanded="false"><svg class="icon tree-chevron"><use href="#ico-chevron"/></svg><svg class="icon tree-folder-icon"><use href="#ico-folder"/></svg><span class="tree-folder-name">应用数据</span><span class="tree-count team-system-label">系统</span></button><div class="knowledge-tree-children hide" data-team-agent-children-top="${escapeTeamHTML(team.id)}">${appGroups}</div></div>`;
-      }).join("");
+      }).join(""));
       groups.querySelectorAll("[data-team-file-actions]").forEach((menu) => {
         if (!menu.querySelector('[data-team-file-action="child"]')) menu.insertAdjacentHTML("afterbegin", `<button type="button" data-team-file-action="child" data-team-id="${escapeTeamHTML(menu.dataset.teamFileActions)}"><svg class="icon"><use href="#ico-plus"/></svg>新建下级目录</button><button type="button" data-team-file-action="rename" data-team-id="${escapeTeamHTML(menu.dataset.teamFileActions)}"><svg class="icon"><use href="#ico-file"/></svg>重命名</button>`);
       });

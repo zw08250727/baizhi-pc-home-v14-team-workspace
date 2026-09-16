@@ -2,7 +2,6 @@ const assert = require('node:assert/strict');
 const { chromium } = require('playwright');
 
 const baseURL = process.env.PROTOTYPE_URL || 'http://127.0.0.1:4173';
-const storageKey = 'baizhi-v14-team-workspace';
 
 (async () => {
   const browser = await chromium.launch({ headless: true });
@@ -13,51 +12,63 @@ const storageKey = 'baizhi-v14-team-workspace';
     page.on('pageerror', error => errors.push(error.message));
 
     await page.goto(`${baseURL}/app.html?edition=enterprise`);
-    await page.locator('#artifact-tree-enterprise .artifact-root').click();
-    assert.equal(await page.locator('#knowledge-folder-title').innerText(), '应用数据');
-    assert.deepEqual(await page.locator('#knowledge-table-head > span').allTextContents(), ['', '名称', '类型', '来源', '状态', '更新时间', '操作']);
-    assert.deepEqual(await page.locator('.artifact-app-folder-row strong').allTextContents(), ['应用A', '应用B']);
-    assert.equal(await page.locator('.artifact-app-data-row').filter({ hasText: 'airtable1.xlsx' }).count(), 0);
+    assert.equal(await page.locator('#apps-entry').count(), 1);
+    assert.equal(await page.locator('#apps-entry').evaluate(el => el.classList.contains('tree-folder-toggle')), true);
+    assert.equal(await page.locator('#apps-entry .tree-chevron').count(), 1);
+    assert.equal(await page.locator('#apps-entry .tree-folder-icon').count(), 1);
+    assert.equal(await page.locator('#apps-entry-count').innerText(), '2');
+    assert.equal(await page.locator('#apps-nav-children').evaluate(el => el.classList.contains('knowledge-tree-children')), true);
+    assert.deepEqual(await page.locator('#apps-nav-children .knowledge-leaf .tree-folder-name').allTextContents(), ['销售洞察', '客户商机']);
+    assert.equal(await page.locator('.artifact-tree').first().evaluate(el => getComputedStyle(el).display), 'none');
 
-    await page.locator('.artifact-app-folder-row').filter({ hasText: '应用A' }).click();
-    assert.equal(await page.locator('#knowledge-folder-title').innerText(), '应用A');
-    assert.deepEqual(await page.locator('.artifact-app-data-row strong').allTextContents(), ['airtable1.xlsx', 'airtable2.xlsx']);
-    await page.locator('.artifact-app-data-row').filter({ hasText: 'airtable1.xlsx' }).click();
-    assert.equal(await page.locator('#knowledge-preview-title').innerText(), 'airtable1.xlsx');
-    assert.equal(await page.locator('#artifact-edit').isVisible(), true);
-    await page.locator('#knowledge-preview-close').click();
-    await page.locator('.artifact-app-data-row').filter({ hasText: 'airtable2.xlsx' }).locator('[data-knowledge-row-action="edit"]').click();
-    assert.equal(await page.locator('#knowledge-preview-title').innerText(), 'airtable2.xlsx');
-    assert.equal(await page.locator('#artifact-edit').isVisible(), true);
+    await page.locator('#apps-entry').click();
+    assert.equal(await page.locator('#page-crumb').innerText(), '知识库');
+    assert.match(await page.locator('.apps-breadcrumb').innerText(), /知识库\s*\/\s*应用数据/);
+    assert.equal(await page.locator('.apps-page-head h1').innerText(), '应用数据');
+    const workspaceBox = await page.locator('.apps-workspace').boundingBox();
+    const knowledgeBox = await page.locator('.knowledge-workspace').evaluate(el => {
+      const style = getComputedStyle(el);
+      return { borderRadius: style.borderRadius, borderColor: style.borderTopColor };
+    });
+    const appBoxStyle = await page.locator('.apps-workspace').evaluate(el => {
+      const style = getComputedStyle(el);
+      return { borderRadius: style.borderRadius, borderColor: style.borderTopColor };
+    });
+    assert.ok(workspaceBox.width > 1000);
+    assert.deepEqual(appBoxStyle, knowledgeBox);
+    assert.deepEqual(await page.locator('.apps-table thead th').allTextContents(), ['应用名称', '数据表', '数据条数', '最近更新时间', '最近更新人']);
+    assert.deepEqual(await page.locator('.apps-name strong').allTextContents(), ['销售洞察', '客户商机']);
+    assert.match(await page.locator('.apps-footer').innerText(), /按 App 展示，不按 Agent 分组/);
+
+    await page.locator('.apps-name').filter({ hasText: '销售洞察' }).click();
+    assert.equal(await page.locator('.apps-page-head h1').innerText(), '销售洞察');
+    assert.deepEqual(await page.locator('.apps-segment button').allTextContents(), ['数据表', '更新历史']);
+    assert.deepEqual(await page.locator('.apps-sheet-nav button span').allTextContents(), ['客户画像', '商机跟进', '周期汇总']);
+    assert.equal(await page.locator('.apps-sheet-heading strong').innerText(), '客户画像');
+    assert.match(await page.locator('.apps-data-grid tbody tr').first().innerText(), /东辰商业/);
+
+    await page.locator('[data-app-table="opportunities"]').click();
+    assert.equal(await page.locator('.apps-sheet-heading strong').innerText(), '商机跟进');
+    await page.locator('[data-app-filter="search"]').fill('门店销售');
+    assert.match(await page.locator('.apps-data-grid tbody tr').first().innerText(), /门店销售数字化/);
+
+    await page.locator('[data-app-tab="history"]').click();
+    assert.equal(await page.locator('.apps-table tbody tr').count(), 2);
+    assert.match(await page.locator('.apps-table tbody tr').first().innerText(), /商机复盘 Agent/);
+    await page.locator('[data-app-history]').first().click();
+    assert.equal(await page.locator('#apps-history-dialog[open]').count(), 1);
+    assert.equal(await page.locator('#apps-history-dialog h2').innerText(), '本次数据变更');
+    assert.match(await page.locator('#apps-history-dialog').innerText(), /修改|删除|新增/);
+    await page.locator('#apps-history-dialog [data-app-close]').click();
 
     await page.goto(`${baseURL}/app.html?workspace=team`);
-    const appDataRoot = page.locator('[data-team-agent-tree-toggle="team-demo"]').first();
-    await appDataRoot.click();
-    assert.equal(await page.locator('#knowledge-folder-title').innerText(), '应用数据');
-    assert.deepEqual(await page.locator('.team-app-data-row[data-team-knowledge-kind="app"] strong').allTextContents(), ['应用A', '应用B']);
-    assert.equal(await page.locator('.team-app-data-row').filter({ hasText: 'airtable1.xlsx' }).count(), 0);
-    assert.deepEqual(
-      await page.evaluate(key => {
-        const team = JSON.parse(localStorage.getItem(key)).teams.find(item => item.id === 'team-demo');
-        return team.agentArtifacts.filter(item => item.type === 'XLSX').map(item => `${item.appName}/${item.tableName}`);
-      }, storageKey),
-      ['应用A/airtable1', '应用A/airtable2', '应用B/airtable1', '应用B/airtable2']
-    );
-
-    await page.locator('[data-team-agent-app-toggle="team-demo"][data-knowledge-folder="应用A"]').first().click();
-    assert.equal(await page.locator('#knowledge-folder-title').innerText(), '应用A');
-    assert.deepEqual(await page.locator('.team-app-data-row[data-team-knowledge-kind="agent"] strong').allTextContents(), ['airtable1.xlsx', 'airtable2.xlsx']);
-    assert.deepEqual(await page.locator('#knowledge-table-head > span').allTextContents(), ['', '名称', '类型', '来源', '状态', '更新时间', '操作']);
-    assert.deepEqual(await page.locator('.team-app-data-row[data-team-knowledge-kind="agent"]').first().locator('> span').nth(3).innerText(), '销售简报 Agent');
-    assert.equal(await page.locator('[data-team-version-history]').first().innerText(), '版本记录');
-    assert.equal(await page.locator('[data-team-knowledge-edit]').first().innerText(), '编辑');
-
-    await page.locator('[data-team-artifact-id]').first().click();
-    assert.equal(await page.locator('#knowledge-preview-title').innerText(), 'airtable1.xlsx');
-    assert.equal(await page.locator('#artifact-edit').isVisible(), true);
+    await page.locator('#apps-entry').click();
+    assert.equal(await page.locator('.apps-page-head h1').innerText(), '应用数据');
+    assert.equal(await page.locator('.team-app-data-group').count(), 0);
+    assert.deepEqual(await page.locator('.apps-name strong').allTextContents(), ['销售洞察', '客户商机']);
 
     assert.deepEqual(errors, []);
-    console.log('PASS: enterprise/team app-data hierarchy, default app tables, preview, and edit entry.');
+    console.log('PASS: v13 application-data workbench, app tables, history drawer, and team entry.');
   } finally {
     await browser.close();
   }

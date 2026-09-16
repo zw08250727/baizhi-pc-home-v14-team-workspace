@@ -2504,8 +2504,12 @@
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
   </style>
   <link rel="stylesheet" href="assets/team-workspace.css?v=app-data-hierarchy" />
+  <link rel="stylesheet" href="assets/apps-data.css?v=v14-knowledge-shell" />
   <link rel="stylesheet" href="assets/agent-artifacts.css?v=app-data-hierarchy" />
   <link rel="stylesheet" href="assets/monochrome-theme.css?v=app-data-hierarchy" />
+  <script>window.APP_DATA_MODE = true;</script>
+  <script src="assets/apps-data-model.js?v=v14-knowledge-shell"></script>
+  <script src="assets/apps-data-ui.js?v=v14-knowledge-shell"></script>
   <script src="assets/agent-artifacts-model.js?v=app-data-hierarchy"></script>
   <script src="assets/agent-artifacts-ui.js?v=app-data-hierarchy"></script>
   <script src="assets/knowledge-file-actions.js?v=app-data-hierarchy"></script>
@@ -3233,6 +3237,7 @@
       ArtifactUI.preview(item);
     };
     const openKnowledgeFolder = (name, trigger = null) => {
+      if (window.APP_DATA_MODE && name.startsWith("artifacts:")) { AppsDataUI.navigate(); return; }
       if (ArtifactUI.guard(() => openKnowledgeFolder(name, trigger))) return;
       if (name.startsWith("artifacts:enterprise") && document.body.dataset.edition === "personal") name = "我的文件";
       activeKnowledgeFolder = name;
@@ -3952,6 +3957,7 @@
     window.BaizhiOpenKnowledgePreview = openKnowledgePreview;
     ArtifactUI.init();
     KnowledgeFileActions.init();
+    AppsDataUI.init();
     const previewParams = new URLSearchParams(window.location.search);
     const previewEdition = previewParams.get("edition");
     const previewView = previewParams.get("view");
@@ -3970,6 +3976,13 @@
     if (previewPage === "knowledge") {
       openKnowledgeFolder(previewFolder || (previewEdition === "personal" ? "我的文件" : "企业文件"));
       if (previewKnowledgeFile === "1") openKnowledgePreview(knowledgeCatalog[activeKnowledgeSchema].find((item) => ArtifactUI.matches(item) && item.preview !== "folder"));
+    }
+    if (previewPage === "apps") {
+      AppsDataUI.navigate(previewParams.get("app"), previewParams.get("scope") === "all" ? "all" : null);
+      if (previewParams.get("run") && previewParams.get("app")) {
+        if (previewParams.get("from") === "task") AppsDataUI.restoreHistory(previewParams.get("run"));
+        else AppsDataUI.openRun(previewParams.get("run"));
+      }
     }
     if (["all", "scheduled", "shared"].includes(previewHistoryTab)) $(`[data-history-tab="${previewHistoryTab}"]`)?.click();
     if (previewSpaceMenu === "1" && previewEdition !== "personal") { $("#space-menu").classList.add("show"); $("#space-switcher").setAttribute("aria-expanded", "true"); }

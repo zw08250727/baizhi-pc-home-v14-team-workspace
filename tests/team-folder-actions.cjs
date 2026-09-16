@@ -108,10 +108,12 @@ const storageKey = 'baizhi-v14-team-workspace';
     await page.goto(`${baseURL}/app.html?edition=personal`);
     assert.equal(await page.locator('#artifact-tree-personal').isVisible(), false);
     await page.goto(`${baseURL}/app.html?edition=enterprise`);
-    assert.equal(await page.locator('#artifact-tree-enterprise').isVisible(), true);
+    assert.equal(await page.locator('#artifact-tree-enterprise').isVisible(), false);
+    assert.equal(await page.locator('#apps-entry').isVisible(), true);
     assert.equal(await page.locator('#artifact-tree-personal').isVisible(), false);
     await page.goto(`${baseURL}/app.html?workspace=team`);
-    assert.equal(await page.locator('.team-app-data-group:visible').count(), 1);
+    assert.equal(await page.locator('.team-app-data-group:visible').count(), 0);
+    assert.equal(await page.locator('#apps-entry').isVisible(), true);
     assert.deepEqual(errors, []);
     console.log('PASS: create, validation, cancel, rename, content preservation, persistence, storage failure, responsive dialogs, and workspace visibility.');
   } finally {

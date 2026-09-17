@@ -41,14 +41,14 @@ window.ArtifactUI = (() => {
       current.version = (current.version || 1) + 1;
       current.updated = new Date().toLocaleString('sv-SE', { timeZone:'Asia/Shanghai' }).slice(0,16);
       current.editedBy = '张伟';
-      current.history = [...(Array.isArray(current.history) ? current.history : [{ version: Math.max(1, (current.version || 2) - 1), agent: current.agent || '销售简报 Agent', time: current.updated, action: '生成并保存到应用数据' }]), { version: current.version, agent: current.editedBy, time: current.updated, action: '编辑并保存 Excel 数据' }];
+      current.history = [...(Array.isArray(current.history) ? current.history : [{ version: Math.max(1, (current.version || 2) - 1), agent: current.agent || '销售简报 Agent', time: current.updated, action: '生成并保存到知识库文件' }]), { version: current.version, agent: current.editedBy, time: current.updated, action: '编辑并保存文件内容' }];
       window.TeamWorkspace?.persist?.();
     }
-    editing = null; renderPreview(); showToast('已保存当前知识库文件，未回写 Apps'); return true;
+    editing = null; renderPreview(); showToast('已保存当前知识库文件'); return true;
   }
   function renderPreview() {
     if (!current) return;
-    const editable = ['XLSX','DOCX'].includes(current.type);
+    const editable = ['XLSX','DOCX'].includes(current.type) && !current.artifact;
     q('#artifact-editor-actions').innerHTML = editable ? editing ? '<button id="artifact-save" class="primary">保存</button><button id="artifact-exit-edit">退出编辑</button>' : '<button id="artifact-edit">编辑</button>' : '';
     q('#artifact-edit')?.addEventListener('click', () => {
       const text = current.documentText || q('#knowledge-preview-body').innerText;
@@ -80,7 +80,7 @@ window.ArtifactUI = (() => {
     }
     if (isArtifact() && item.artifact && !folder) {
       const sourceAgent = item.agent || item.source || '销售简报 Agent';
-      const artifactActions = `<button type="button" class="artifact-text-action" data-toast="正在打开 ${esc(item.name)} 的版本记录">版本记录</button><button type="button" class="artifact-text-action" data-knowledge-row-action="edit">编辑</button><button type="button" class="file-trash-button" data-knowledge-row-action="delete" title="删除" aria-label="删除 ${esc(item.name)}"><svg class="icon" aria-hidden="true"><use href="#ico-trash"/></svg></button>`;
+      const artifactActions = `<button type="button" class="artifact-text-action" data-toast="正在打开 ${esc(item.name)} 的版本记录">版本记录</button>`;
       return `<div class="knowledge-file-row artifact-app-data-row" role="button" tabindex="0" data-schema="file" data-knowledge-index="${index}"><span><input class="knowledge-check" type="checkbox" aria-label="选择${esc(item.name)}"></span><span class="knowledge-file-name"><span class="knowledge-file-mark"><svg class="icon"><use href="#ico-file"/></svg></span><span><strong>${esc(item.name)}</strong><small>${esc(item.meta || `${item.appName || '应用数据'} · ${sourceAgent} 生成 · ${item.type}`)}</small></span></span><span>${esc(item.type)}</span><span>${esc(sourceAgent)}</span><span>${knowledgeStateHTML(item.state || '已生成')}</span><span>${esc(item.updated || '—')}</span><span class="artifact-actions">${artifactActions}</span></div>`;
     }
     return `<div class="knowledge-file-row" role="button" tabindex="0" data-schema="file" data-knowledge-index="${index}"><span>${item.system || folder ? '' : `<input class="knowledge-check" type="checkbox" aria-label="选择${esc(item.name)}">`}</span><span class="knowledge-file-name"><span class="knowledge-file-mark"><svg class="icon"><use href="#${folder ? 'ico-folder' : 'ico-file'}"/></svg></span><strong>${esc(item.name)}</strong></span><span>${esc(item.type)}</span><span>${esc(item.size)}</span><span>${folder ? '—' : knowledgeStateHTML(item.state)}${item.state === '解析失败' ? '<button class="artifact-retry" data-artifact-retry>重试解析</button>' : ''}</span><span class="artifact-creator"><span>${esc(item.creator || '—')}</span><small title="${esc(item.organization)}">${esc(item.organization || '—')}</small></span><span>${folder ? '—' : esc(item.updated)}</span><span class="artifact-actions">${KnowledgeFileActions.actions(item)}</span></div>`;
@@ -104,7 +104,7 @@ window.ArtifactUI = (() => {
     q('#artifact-department').value = 'all';
     if (artifact) {
       q('#knowledge-folder-title').textContent = parts[2] || '应用数据';
-      q('#knowledge-folder-meta').textContent = parts[2] ? `「${parts[2]}」下的表可被 Agent 执行时调用，支持预览与编辑。` : '按应用组织 Agent 可调用的数据表；每个应用下可包含一张或多张表。';
+      q('#knowledge-folder-meta').textContent = parts[2] ? `「${parts[2]}」下的表可被 Agent 执行时调用，用户界面只读预览。` : '按应用组织 Agent 可调用的数据表；每个应用下可包含一张或多张表，用户界面只读。';
     }
     q('#knowledge-type-filter-wrap').hidden = false;
     const selected = [...document.querySelectorAll('[data-artifact-folder]')].find(x => x.dataset.artifactFolder === activeKnowledgeFolder);

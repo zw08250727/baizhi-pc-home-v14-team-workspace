@@ -66,7 +66,7 @@ const storageKey = 'baizhi-v14-team-workspace';
     assert.equal(updatedTeam.name, originalTeam.name);
     assert.deepEqual(updatedTeam.sharePackages, originalTeam.sharePackages);
     assert.deepEqual(updatedTeam.agentArtifacts, originalTeam.agentArtifacts);
-    const expectedRows = originalTeam.sharePackages.length + originalTeam.artifacts.length + originalTeam.agentArtifacts.length;
+    const expectedRows = originalTeam.sharePackages.length + originalTeam.artifacts.length;
     assert.equal(await page.locator('.team-knowledge-row').count(), expectedRows);
 
     await page.reload();

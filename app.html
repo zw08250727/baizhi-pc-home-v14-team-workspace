@@ -2509,10 +2509,10 @@
   <link rel="stylesheet" href="assets/agent-artifacts.css?v=app-data-hierarchy" />
   <link rel="stylesheet" href="assets/monochrome-theme.css?v=app-data-hierarchy" />
   <script>window.APP_DATA_MODE = true;</script>
-  <script src="assets/apps-data-model.js?v=v14-knowledge-shell"></script>
-  <script src="assets/apps-data-ui.js?v=v14-knowledge-shell"></script>
+  <script src="assets/apps-data-model.js?v=apps-permissions"></script>
+  <script src="assets/apps-data-ui.js?v=apps-permissions"></script>
   <script src="assets/agent-artifacts-model.js?v=app-data-hierarchy"></script>
-  <script src="assets/agent-artifacts-ui.js?v=app-data-hierarchy"></script>
+  <script src="assets/agent-artifacts-ui.js?v=apps-permissions"></script>
   <script src="assets/knowledge-file-actions.js?v=app-data-hierarchy"></script>
 </head>
 <body>
@@ -3988,6 +3988,6 @@
     if (["all", "scheduled", "shared"].includes(previewHistoryTab)) $(`[data-history-tab="${previewHistoryTab}"]`)?.click();
     if (previewSpaceMenu === "1" && previewEdition !== "personal") { $("#space-menu").classList.add("show"); $("#space-switcher").setAttribute("aria-expanded", "true"); }
   </script>
-  <script src="assets/team-workspace.js?v=project-list"></script>
+  <script src="assets/team-workspace.js?v=apps-permissions"></script>
 </body>
 </html>

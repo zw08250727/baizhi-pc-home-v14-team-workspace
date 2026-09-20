@@ -117,6 +117,7 @@ window.ArtifactUI = (() => {
     return { id:`system-${space}-${appName || 'root'}`,system:true,space,appName,name:appName || '应用数据',folder:appName ? model.folder(space) : space === 'personal' ? '我的文件' : '企业文件',folderKey:model.folder(space,appName),type:'文件夹',preview:'folder',size:'—',count,source:appName ? '应用数据' : 'Agent 产物',state:appName ? '可调用' : '',updated:'',icon:'ico-folder',meta:appName ? `${count} 张表 · Agent 执行时可调用` : '按应用分组的结构化数据' };
   }
   function sync() {
+    if (window.APP_DATA_MODE) return;
     model.read().forEach(record => { if (!imported.has(record.id)) { imported.add(record.id); knowledgeCatalog.file.push(record); } });
     knowledgeCatalog.file.forEach((record, index) => { if (record.artifact) Object.assign(record, model.normalize(record, index)); });
     ['personal','enterprise'].forEach(space => {
@@ -136,10 +137,10 @@ window.ArtifactUI = (() => {
     });
   }
   function init() {
-    knowledgeCatalog.file.push(...model.seed());
-    knowledgeSchemas.file.sources.push('Agent 产物'); knowledgeSchemas.file.types.push('XLSX');
+    if (!window.APP_DATA_MODE) knowledgeCatalog.file.push(...model.seed());
+    if (!window.APP_DATA_MODE) knowledgeSchemas.file.sources.push('Agent 产物'); knowledgeSchemas.file.types.push('XLSX');
     knowledgeCatalog.file.filter(x => !x.artifact).forEach(x => { x.creator = '张伟'; x.organization = model.departments[0]; });
-    ['personal','enterprise'].forEach(space => { const tree = q(`#${space}-file-tree`); if (tree?.parentElement) tree.parentElement.insertAdjacentHTML('afterend', `<div id="artifact-tree-${space}" class="artifact-tree"></div>`); });
+    if (!window.APP_DATA_MODE) ['personal','enterprise'].forEach(space => { const tree = q(`#${space}-file-tree`); if (tree?.parentElement) tree.parentElement.insertAdjacentHTML('afterend', `<div id="artifact-tree-${space}" class="artifact-tree"></div>`); });
     q('.knowledge-filters').insertAdjacentHTML('afterbegin', `<label id="artifact-department-wrap" class="knowledge-filter-label">部门<select id="artifact-department"><option value="all">全部部门</option>${model.departments.map(d => `<option>${esc(d)}</option>`).join('')}</select></label>`);
     q('#artifact-department').addEventListener('change', renderKnowledgeFiles);
     q('#knowledge-preview-close').insertAdjacentHTML('beforebegin','<div id="artifact-editor-actions" class="artifact-editor-actions"></div>');

@@ -62,7 +62,11 @@
 .apps-sheet-nav button.active em { color:#5280dc; }
 .apps-sheet-content { min-width:0; }
 .apps-sheet-heading { display:flex; align-items:center; gap:12px; min-height:44px; padding:0 14px; border-bottom:1px solid #e8ecf2; }
+.apps-sheet-heading-copy { display:flex; min-width:0; flex:1; align-items:baseline; gap:10px; }
 .apps-sheet-heading strong { font-size:13px; font-weight:600; }
+.apps-sheet-actions { display:flex; align-items:center; gap:8px; }
+.apps-download-btn { display:inline-flex; align-items:center; gap:6px; }
+.apps-download-btn svg { width:14px; height:14px; }
 .apps-sheet-content .apps-toolbar { padding:10px 12px; gap:8px; }
 .apps-sheet-content input[type=search] { width:200px; }
 .apps-grid-scroll { border-top:1px solid #e1e6ee; min-height:320px; max-height:max(320px,calc(100vh - 455px)); }
@@ -76,6 +80,8 @@
 .apps-data-grid th:first-child { z-index:2; }
 .apps-data-grid .apps-person small { margin-top:0; line-height:15px; }
 .apps-data-grid .apps-number-cell { text-align:right; font-variant-numeric:tabular-nums; }
+.apps-data-grid td.apps-readonly-cell { background:#e8ecf2; color:#536176; cursor:default; }
+.apps-data-grid tbody tr:hover td.apps-readonly-cell { background:#e8ecf2; }
 .apps-data-grid .apps-time-cell { font-size:11px; white-space:nowrap; font-variant-numeric:tabular-nums; }
 .apps-sheet-content .apps-footer { padding:10px 12px; }
 .apps-pill { display:inline-flex; gap:5px; padding:3px 8px; background:#edf8f2; color:#29835b; border-radius:4px; font-size:11px; }

@@ -203,6 +203,8 @@ body.app-data-mode .apps-update {
 .apps-grid-controls { display:flex; gap:10px; align-items:center; padding:8px 12px; border-top:1px solid #edf0f5; }
 .apps-grid-controls > div { display:flex; align-items:center; gap:8px; margin-right:auto; }
 .apps-grid-controls .apps-btn { min-height:30px; }
+.apps-toolbar .apps-grid-controls-inline { padding:0; border-top:0; gap:8px; }
+.apps-toolbar .apps-grid-controls-inline > div { margin-right:0; }
 .apps-btn.chosen { color:#165dff; background:#edf3ff; border-color:#ccdfff; }
 .apps-query-panel { margin:0 12px 12px; padding:14px; background:#f8faff; border:1px solid #dde6f6; border-radius:7px; }
 .apps-query-heading { display:flex; align-items:center; gap:12px; margin-bottom:12px; font-size:12px; }

@@ -96,8 +96,10 @@ window.AppsGridTools = (() => {
 
   function toolbar(currentTable) {
     table = currentTable;
-    return `<div class="apps-grid-controls"><div><button class="apps-btn ${filters.length ? 'chosen' : ''}" type="button" data-grid-panel="filter" aria-expanded="${panel === 'filter'}">筛选${filters.length ? ` · ${filters.length}` : ''}</button><button class="apps-btn ${sorts.length ? 'chosen' : ''}" type="button" data-grid-panel="sort" aria-expanded="${panel === 'sort'}">排序${sorts.length ? ` · ${sorts.length}` : ''}</button>${filters.length || sorts.length ? '<button class="apps-link" type="button" data-grid-reset>清空条件</button>' : ''}</div>${filters.length ? `<span class="apps-query-summary">同时满足 ${filters.length} 个筛选条件</span>` : ''}</div>${panel ? builder() : ''}`;
+    return `<div class="apps-grid-controls apps-grid-controls-inline"><div><button class="apps-btn ${filters.length ? 'chosen' : ''}" type="button" data-grid-panel="filter" aria-expanded="${panel === 'filter'}">筛选${filters.length ? ` · ${filters.length}` : ''}</button><button class="apps-btn ${sorts.length ? 'chosen' : ''}" type="button" data-grid-panel="sort" aria-expanded="${panel === 'sort'}">排序${sorts.length ? ` · ${sorts.length}` : ''}</button>${filters.length || sorts.length ? '<button class="apps-link" type="button" data-grid-reset>清空条件</button>' : ''}</div>${filters.length ? `<span class="apps-query-summary">同时满足 ${filters.length} 个筛选条件</span>` : ''}</div>`;
   }
+
+  function queryPanel() { return panel ? builder() : ''; }
 
   function footer(total) {
     const state = getState();
@@ -162,5 +164,5 @@ window.AppsGridTools = (() => {
     root.addEventListener('input', event => { const data = event.target.dataset; if ('gridRule' in data && data.rulePart === 'value') (panel === 'filter' ? filterDraft : sortDraft)[Number(data.gridRule)].value = event.target.value; });
   }
 
-  return {init, reset, query, toolbar, footer};
+  return {init, reset, query, toolbar, queryPanel, footer};
 })();

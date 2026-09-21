@@ -198,3 +198,26 @@ body.app-data-mode .apps-update {
   background:#f1f1f1;
   margin:12px 22px 0;
 }
+
+/* Application data grid: filter and sort controls. */
+.apps-grid-controls { display:flex; gap:10px; align-items:center; padding:8px 12px; border-top:1px solid #edf0f5; }
+.apps-grid-controls > div { display:flex; align-items:center; gap:8px; margin-right:auto; }
+.apps-grid-controls .apps-btn { min-height:30px; }
+.apps-btn.chosen { color:#165dff; background:#edf3ff; border-color:#ccdfff; }
+.apps-query-panel { margin:0 12px 12px; padding:14px; background:#f8faff; border:1px solid #dde6f6; border-radius:7px; }
+.apps-query-heading { display:flex; align-items:center; gap:12px; margin-bottom:12px; font-size:12px; }
+.apps-query-heading span,.apps-rule-no-value { color:#8995a6; font-size:11px; }
+.apps-query-rule { display:flex; align-items:center; gap:8px; margin-bottom:8px; flex-wrap:wrap; }
+.apps-query-rule > span:first-child { width:16px; color:#98a5b8; }
+.apps-query-rule select { min-width:110px; max-width:190px; }
+.apps-query-rule input { width:180px; min-width:90px; }
+.apps-query-rule .apps-link { margin-left:auto; }
+.apps-query-panel footer { display:flex; align-items:center; justify-content:space-between; gap:12px; padding-top:8px; }
+.apps-query-panel footer > div { display:flex; gap:8px; }
+.apps-query-summary { color:#6481b4; font-size:11px; }
+.apps-query-panel [disabled] { cursor:not-allowed; opacity:.5; }
+@media(max-width:850px) {
+  .apps-query-heading { align-items:flex-start; flex-direction:column; gap:4px; }
+  .apps-query-rule { align-items:stretch; }
+  .apps-query-rule .apps-link { margin-left:0; }
+}

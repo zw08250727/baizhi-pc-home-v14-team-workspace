@@ -2510,6 +2510,7 @@
   <link rel="stylesheet" href="assets/monochrome-theme.css?v=app-data-hierarchy" />
   <script>window.APP_DATA_MODE = true;</script>
   <link rel="stylesheet" href="assets/apps-data-editor.css?v=apps-editing-v1" />
+  <link rel="stylesheet" href="assets/contacts.css?v=contacts-v14" />
   <script src="assets/apps-field-values.js?v=apps-editing-v1"></script>
   <script src="assets/apps-data-model.js?v=apps-editing-v1"></script>
   <script src="assets/apps-data-editor.js?v=apps-editing-v1"></script>
@@ -2633,6 +2634,7 @@
                 </div></div>
               </div></div>
             </div></div>
+            <button class="side-sub-item knowledge-leaf contacts-nav-entry" data-main-target="contacts" data-contacts-entry="true" data-side-entry="联系人" data-knowledge-folder="联系人" type="button"><svg class="icon"><use href="#ico-user"/></svg><span class="tree-folder-name">联系人</span><span class="tree-count">6</span></button>
             <div class="knowledge-sidebar-tools">
               <button class="recycle-bin-entry" id="recycle-bin-entry" type="button"><svg class="icon"><use href="#ico-trash"/></svg><span>知识库回收站</span></button>
             </div>
@@ -2771,6 +2773,10 @@
           <div class="knowledge-preview-actions"><div class="knowledge-preview-pagination" aria-label="文档浏览控制"><button type="button" id="knowledge-preview-prev" aria-label="上一页"><svg class="icon"><use href="#ico-chevron"/></svg></button><span class="knowledge-preview-page">1 / 12</span><button type="button" id="knowledge-preview-next" aria-label="下一页"><svg class="icon"><use href="#ico-chevron"/></svg></button><span class="knowledge-preview-zoom">100%</span></div><button class="primary" id="knowledge-preview-use">引用到小智</button></div>
         </aside>
       </div>
+    </section>
+
+    <section class="contacts-workspace" data-main-view="contacts" hidden aria-label="联系人">
+      <div id="contacts-root"></div>
     </section>
 
     <section class="recycle-workspace" data-main-view="recycle-bin" hidden aria-label="回收站">
@@ -2985,11 +2991,11 @@
     $("#user-card").addEventListener("click", (event) => { event.stopPropagation(); closeSpaceMenu(); const open = !$("#user-menu").classList.contains("show"); $("#user-menu").classList.toggle("show", open); $("#user-card").setAttribute("aria-expanded", String(open)); });
     $("#user-menu").addEventListener("click", (event) => { event.stopPropagation(); const item = event.target.closest("[data-profile-action]"); if (!item) return; const action = item.dataset.profileAction; if (action === "profile") openDrawer("个人中心", '<h4>张伟</h4><div class="drawer-section"><strong>个人资料</strong><p>维护头像、姓名与个人工作信息。</p></div><div class="drawer-section"><strong>我的设备</strong><p>查看已登录的网页端、移动端与桌面端。</p></div>', '<button class="primary-btn" data-toast="个人资料已保存">编辑个人资料</button>'); else if (action === "switch-edition") { closeUserMenu(); $("#edition-gate").hidden = false; return; } else if (action === "download-app") { closeUserMenu(); setAppQrOpen(true); return; } else if (action === "checkin") { item.textContent = "已签到"; item.disabled = true; showToast("签到成功，获得 20 积分"); } else if (action === "logout") showToast("原型演示：退出登录需要二次确认"); else showToast({ upgrade: "正在查看升级方案", points: "正在打开积分明细", "earn-points": "正在打开积分任务", website: "正在打开百智官网", orders: "正在打开我的订单", "agent-workspace": "将按已有逻辑打开 Agent 工作台", intro: "正在打开产品介绍", changelog: "正在打开更新日志", guide: "正在打开新手指南" }[action] || "正在打开个人设置"); closeUserMenu(); });
     document.addEventListener("click", (event) => { if (!event.target.closest(".space-switcher-wrap")) closeSpaceMenu(); if (!event.target.closest(".user-footer")) closeUserMenu(); });
-    const mainViewTitles = { home: "企业AI工作台", knowledge: "知识库", "recycle-bin": "回收站", capabilities: "AI专家· 技能·连接器", recording: "语音录制", "note-detail": "语音内容" };
+    const mainViewTitles = { home: "企业AI工作台", knowledge: "知识库", contacts: "联系人", "recycle-bin": "回收站", capabilities: "AI专家· 技能·连接器", recording: "语音录制", "note-detail": "语音内容" };
     const setActiveSidebar = (target) => {
       $$(".side-sub-item, .nav-item, .side-group-head").forEach((row) => { row.classList.remove("active"); row.removeAttribute("aria-current"); });
       [$("#recycle-bin-entry"), $("#recording-recycle-entry")].forEach((row) => { row.classList.remove("active"); row.removeAttribute("aria-current"); });
-      const activeItem = ["home", "note-detail"].includes(target) ? $("#home-entry") : target === "recording" ? $("#start-recording") : target === "recycle-bin" ? (activeRecycleRepository === "recording" ? $("#recording-recycle-entry") : $("#recycle-bin-entry")) : target === "knowledge" ? null : $("#capability-entry");
+      const activeItem = ["home", "note-detail"].includes(target) ? $("#home-entry") : target === "recording" ? $("#start-recording") : target === "recycle-bin" ? (activeRecycleRepository === "recording" ? $("#recording-recycle-entry") : $("#recycle-bin-entry")) : target === "contacts" ? $("[data-contacts-entry]") : target === "knowledge" ? null : $("#capability-entry");
       if (activeItem) { activeItem.classList.add("active"); activeItem.setAttribute("aria-current", "page"); }
     };
     const showMainView = (target, options = {}) => {
@@ -3994,5 +4000,7 @@
     if (previewSpaceMenu === "1" && previewEdition !== "personal") { $("#space-menu").classList.add("show"); $("#space-switcher").setAttribute("aria-expanded", "true"); }
   </script>
   <script src="assets/team-workspace.js?v=apps-permissions"></script>
+  <script src="assets/contacts-model.js?v=contacts-v14"></script>
+  <script src="assets/contacts-ui.js?v=contacts-v14"></script>
 </body>
 </html>

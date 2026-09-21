@@ -123,7 +123,11 @@ window.AppsDataUI = (() => {
 	    mainViewTitles.apps='知识库';
 	    q('.main').insertAdjacentHTML('beforeend','<section class="apps-workspace" data-main-view="apps" hidden aria-label="应用数据工作台"></section>');root=q('.apps-workspace');
     q('#knowledge-side-list').insertAdjacentHTML('beforeend','<div class="knowledge-tree-node apps-nav"><button id="apps-entry" class="tree-folder-toggle apps-side-entry" type="button" aria-expanded="true" aria-controls="apps-nav-children"><svg class="icon tree-chevron"><use href="#ico-chevron"/></svg><svg class="icon tree-folder-icon"><use href="#ico-folder"/></svg><span class="tree-folder-name">应用数据</span><span class="tree-count" id="apps-entry-count">0</span></button><div id="apps-nav-children" class="knowledge-tree-children apps-nav-children"></div></div>');
-    q('.knowledge-sidebar-tools').before(q('.apps-nav'));
+    // Keep the app-data root above the Contacts first-level entry in the
+    // knowledge tree. The entry is wrapped by the shell after static markup
+    // is prepared, so insert before its row when available.
+    const contactsRow=q('[data-contacts-entry]')?.closest('.knowledge-tree-leaf-row');
+    (contactsRow||q('[data-contacts-entry]')||q('.knowledge-sidebar-tools')).before(q('.apps-nav'));
     document.body.insertAdjacentHTML('beforeend','<dialog id="apps-history-dialog" class="apps-dialog apps-drawer" aria-label="本次数据变更"></dialog><dialog id="apps-demo-dialog" class="apps-dialog" aria-label="演示设置"></dialog>');
     q('#apps-entry').onclick=()=>{const children=q('#apps-nav-children');const expanded=q('#apps-entry').getAttribute('aria-expanded')==='true';children.classList.toggle('hide',expanded);q('#apps-entry').setAttribute('aria-expanded',String(!expanded));navigate();};
     document.addEventListener('click',event=>{

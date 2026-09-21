@@ -29,6 +29,8 @@ window.AppsDataModel = (() => {
     ]}
   ];
   const opMap = {'新增':'create','修改':'update','删除':'delete','读取':'read'};
+  const requiredNames=new Set(['客户名称','商机名称','统计周期','企业名称','项目名称']);
+  apps.forEach(a=>a.tables.forEach(t=>{t.manualOperations=['create','update','delete'];t.fields=t.fields.map(f=>[...f,{required:requiredNames.has(f[0])}]);}));
   let db;
   const context = input => typeof input === 'object' && input
     ? {space:input.space || (input.personal ? 'personal' : 'enterprise'),teamId:input.teamId || TEAM_ID}
@@ -77,8 +79,8 @@ window.AppsDataModel = (() => {
     const before = index < 0 ? null : clone(rows[index].values);
     if (op !== '新增' && index < 0) return;
     if (op === '修改' && JSON.stringify(before)===JSON.stringify(values)) return;
-    if (op === '新增') rows.push({id,owner,teamId:TEAM_ID,values:clone(values),updated:run.time});
-    if (op === '修改') rows[index]={...rows[index],values:clone(values),updated:run.time};
+    if (op === '新增') rows.push({id,owner,teamId:TEAM_ID,values:clone(values),updated:run.time,version:`${run.id}:${run.changes.length}`});
+    if (op === '修改') rows[index]={...rows[index],values:clone(values),updated:run.time,version:`${run.id}:${run.changes.length}`};
     if (op === '删除') rows.splice(index,1);
     run.changes.push({app,table,owner,op,id,before,after:op==='删除'?null:clone(values),time:run.time,sequence:run.changes.length+1,agent:run.agent,actor:run.actor,teamId:TEAM_ID});
   }
@@ -140,5 +142,42 @@ window.AppsDataModel = (() => {
   // Prototype task ACL: only the initiator has a task-detail grant. App access alone is not a task grant.
   function taskFor(user,id){const task=db.runs.find(r=>r.id===id&&r.actor===user);return task?clone(task):null;}
   function reload(){try{const data=JSON.parse(localStorage.getItem(key));if(data?.rows)db=data;}catch{}}
-  return {users,apps,list,rows,history,canManage,canManageTable,agentAllowed,allowed,taskFor,run,reset,reload,key,revision:()=>db.revision,visible:user=>[...(db.visible[user]||[])]};
+  function permissions(user,appId,tableId,row,scope,ctxInput={}) {
+    const ctx=context(ctxInput),a=appById(appId),t=tableById(appId,tableId);
+    const manager=t?.owner===user || (ctx.space==='team' && isTeamApp(a,ctx) && (a.teamOwner===user || a.teamAdmins?.includes(user))) || (ctx.space==='enterprise' && user==='li');
+    const access=allowed(user,a,scope,ctx) && (ctx.space!=='team'||isTeamApp(a,ctx));
+    const visible=!!row && rows(user,appId,tableId,scope,ctx).some(r=>r.id===row.id);
+    return Object.fromEntries(['create','update','delete'].map(op=>[op,Boolean(access&&manager&&t?.manualOperations.includes(op)&&(op==='create'||visible))]));
+  }
+  function mutate(input,operation,{id,values,version}={}) {
+    reload();
+    const {user,appId,table,scope}=input,ctx=context(input.access||input.personal||{});
+    const definition=tableById(appId,table),data=db.rows[appId]?.[table],current=data?.find(r=>r.id===id);
+    if(!definition||!data)throw Error('这张表已不存在，请重新打开应用。');
+    if(!['create','update','delete'].includes(operation))throw Error('不支持此操作。');
+    if(operation!=='create'&&!current)throw Error('这条记录已被删除，请刷新后重试。');
+    if(!permissions(user,appId,table,current,scope,ctx)[operation])throw Error('当前没有操作权限，未保存任何修改。');
+    if(operation!=='create'&&String(current.version||current.updated)!==String(version))throw Error('这条记录已被更新。请保留草稿，刷新后重新编辑。');
+    if(operation!=='delete'){
+      if(!Array.isArray(values)||values.length!==definition.fields.length)throw Error('表结构已变化，请重新打开编辑。');
+      values=definition.fields.map((field,i)=>AppsFieldValues.parse(field,values[i]));
+    }
+    const before=clone(db),time=new Date().toLocaleString('sv-SE',{timeZone:'Asia/Shanghai'}),nextVersion=crypto.randomUUID();
+    let record;
+    if(operation==='create'){
+      record={id:'manual-'+crypto.randomUUID(),owner:user,teamId:ctx.space==='team'?ctx.teamId:null,created:time,createdBy:user,values:clone(values),updated:time,updatedBy:user,version:nextVersion};data.unshift(record);
+      const visible=db.visible[user] ||= [];if(!visible.includes(appId))visible.push(appId);
+    }
+    if(operation==='update'){record={...current,values:clone(values),updated:time,updatedBy:user,version:nextVersion};data.splice(data.indexOf(current),1,record);}
+    if(operation==='delete')data.splice(data.indexOf(current),1);
+    db.revision++;
+    (db.manualActivity||=[]).unshift({app:appId,table,id:record?.id||id,actor:user,owner:record?.owner||current.owner,teamId:record?.teamId||current?.teamId,time,operation,before:current?clone(current.values):null,after:record?clone(record.values):null});
+    try{localStorage.setItem(key,JSON.stringify(db));}catch{db=before;throw Error('本地保存失败，草稿已保留，请重试。');}
+    return clone(record||{id,deleted:true});
+  }
+  function latestActivity(user,appId,scope,ctxInput={}) {
+    const ctx=context(ctxInput);if(!allowed(user,appById(appId),scope,ctx))return null;
+    return [...history(user,appId,scope,ctx),...(db.manualActivity||[]).filter(r=>r.app===appId&&(scope==='team'?r.teamId===ctx.teamId:scope==='all'||r.owner===user))].sort((a,b)=>b.time.localeCompare(a.time))[0]||null;
+  }
+  return {users,apps,list,rows,history,canManage,canManageTable,agentAllowed,allowed,taskFor,run,reset,reload,key,permissions,mutate,latestActivity,revision:()=>db.revision,visible:user=>[...(db.visible[user]||[])]};
 })();

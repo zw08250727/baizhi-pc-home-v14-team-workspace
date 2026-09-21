@@ -17,7 +17,7 @@ window.AppsDataUI = (() => {
   function navigate(id=null,scope=null,tab='data') {
     if(E.guard(()=>navigate(id,scope,tab))||ArtifactUI.guard(()=>navigate(id,scope,tab)))return;
     const a=M.apps.find(x=>x.id===id);
-    state.app=a?.id||null;state.scope=scope||initialScope(a);state.tab=tab;state.table=a?.tables[0]?.id||null;resetFilters();
+    state.app=a?.id||null;state.scope=initialScope(a);state.tab=tab;state.table=a?.tables[0]?.id||null;resetFilters();
     if(a&&!M.allowed(state.user,a,state.scope,context())){state.app=null;showToast('当前身份无权查看此应用数据');}
     showMainView('apps',{silent:true});document.querySelectorAll('.tree-folder-toggle.active,.knowledge-leaf.active,.apps-side-entry.active').forEach(x=>x.classList.remove('active'));render();
   }
@@ -86,7 +86,7 @@ window.AppsDataUI = (() => {
       historySnapshot=getHistory();const footer=pageFooter(historySnapshot.length),slice=historySnapshot.slice((state.page-1)*7,state.page*7);
 	      body=`<div class="apps-toolbar"><div class="apps-filter-group">${ownerFilter}<select data-app-filter="agent" aria-label="Agent">${opts([['','全部 Agent'],...[...new Set(fullHistory.map(r=>r.agent))].map(n=>[n,n])],state.agent)}</select><select data-app-filter="historyTable" aria-label="历史数据表">${opts([['','全部数据表'],...a.tables.map(t=>[t.id,t.name])],state.historyTable)}</select><select data-app-filter="operation" aria-label="变更类型">${opts([['','全部变更类型'],...['新增','修改','删除'].map(x=>[x,x])],state.operation)}</select><input type="date" aria-label="开始日期" data-app-filter="from" value="${state.from}"><span class="apps-caption">至</span><input type="date" aria-label="结束日期" data-app-filter="to" value="${state.to}"></div><button class="apps-link" data-app-clear>清空筛选</button></div><div class="apps-panel"><div class="apps-table-scroll"><table class="apps-table"><thead><tr><th>更新时间 / 任务</th><th>触发人</th><th>Agent</th><th>执行状态</th><th>数据变更<small>当前筛选范围 · 行变更次数</small></th><th></th></tr></thead><tbody>${slice.map(r=>`<tr><td>${esc(r.time)}<small style="display:block;color:#8d98a9;max-width:210px;white-space:normal">${esc(r.title)}</small></td><td>${person(r.actor)}</td><td>${esc(r.agent)}</td><td><span class="apps-pill ${r.status==='失败'?'warn':''}">${r.status==='失败'?'执行失败':'执行成功'}</span>${r.status==='失败'?'<small style="display:block;color:#af8957">部分数据已提交</small>':''}</td><td>${counts(r.changes)}<small class="apps-caption">${[...new Set(r.changes.map(c=>a.tables.find(t=>t.id===c.table)?.name))].map(esc).join('、')}</small></td><td><button class="apps-link" data-app-history="${r.id}">查看变更</button></td></tr>`).join('')}</tbody></table>${!slice.length?empty('没有匹配的更新记录','只展示已实际提交的数据变更。'):''}</div>${footer}</div>`;
     }
-    const scopeButtons=team()?`<button data-app-scope="team" class="${state.scope==='team'?'active':''}">团队数据</button><button data-app-scope="mine" class="${state.scope==='mine'?'active':''}" ${!M.allowed(state.user,a,'mine',context())?'disabled':''}>我的数据</button>${M.canManage(state.user,a,context())?`<button data-app-scope="all" class="${state.scope==='all'?'active':''}">管理视图</button>`:''}`:M.canManage(state.user,a,context())?`<button data-app-scope="mine" class="${state.scope==='mine'?'active':''}" ${!M.allowed(state.user,a,'mine',context())?'disabled':''}>我的数据</button><button data-app-scope="all" class="${state.scope==='all'?'active':''}">全部数据</button>`:'';
+    const scopeButtons='';
     const scopeNote=state.scope==='team'?'当前团队可见数据':state.scope==='all'?'授权管理范围内数据':'当前身份关联数据';
     root.innerHTML=head(a.name,a.description)+`${scopeButtons?`<div class="apps-scope">${scopeButtons}<span class="apps-caption">${scopeNote}</span></div>`:''}<div class="apps-segment"><button data-app-tab="data" class="${state.tab==='data'?'active':''}">数据表</button><button data-app-tab="history" class="${state.tab==='history'?'active':''}">更新历史</button></div>${body}<p class="apps-caption">最近读取：${new Date().toLocaleString('zh-CN',{hour12:false})} · 当前为已提交数据 · 按表权限开放编辑</p>`;
   }
@@ -130,7 +130,6 @@ window.AppsDataUI = (() => {
       if('appOpen'in d)navigate(d.appOpen);
       else if('appBack'in d)navigate();
       else if('appMode'in d){state.mode=d.appMode;state.search='';render();}
-      else if('appScope'in d){state.scope=d.appScope;resetFilters();render();}
       else if('appTab'in d){state.tab=d.appTab;resetFilters();render();}
       else if('appTable'in d){state.table=d.appTable;resetFilters();render();}
       else if('appPage'in d){state.page+=Number(d.appPage);render();}

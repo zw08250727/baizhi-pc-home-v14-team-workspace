@@ -19,7 +19,7 @@ window.AppsDataUI = (() => {
     const a=M.apps.find(x=>x.id===id);
     state.app=a?.id||null;state.scope=initialScope(a);state.tab=tab;state.table=a?.tables[0]?.id||null;resetFilters();
     if(a&&!M.allowed(state.user,a,state.scope,context())){state.app=null;showToast('当前身份无权查看此应用数据');}
-    showMainView('apps',{silent:true});document.querySelectorAll('.tree-folder-toggle.active,.knowledge-leaf.active,.apps-side-entry.active').forEach(x=>x.classList.remove('active'));render();
+    showMainView('apps',{silent:true});document.querySelectorAll('.tree-folder-toggle.active,.knowledge-leaf.active,.apps-side-entry.active').forEach(x=>x.classList.remove('active'));render();window.setKnowledgeXiaozhiContext?.(a?.name||'应用数据','folder');
   }
   function nav() {
     const list=availableApps();
@@ -32,7 +32,7 @@ window.AppsDataUI = (() => {
     const crumb=state.app
       ? `<button type="button" data-app-back>应用数据</button><span>/</span><span>${esc(title)}</span>`
       : `<span>应用数据</span>`;
-    return `<header class="apps-page-head"><div class="apps-heading"><div class="apps-breadcrumb"><button type="button" data-app-back>知识库</button><span>/</span>${crumb}</div><h1>${esc(title)}</h1><p>${esc(description)}</p></div><div class="apps-head-actions"><button class="apps-btn primary" type="button" data-app-refresh><span>刷新数据</span></button><button class="apps-btn" type="button" data-app-demo><span>模拟更新</span></button></div></header><div id="apps-new-data" class="apps-update" hidden><span>有新数据，刷新查看</span><button class="apps-link" data-app-refresh>刷新</button></div>`;
+    return `<header class="apps-page-head"><div class="apps-heading"><div class="apps-breadcrumb"><button type="button" data-app-back>知识库</button><span>/</span>${crumb}</div><h1>${esc(title)}</h1><p>${esc(description)}</p></div><div class="apps-head-actions"><button class="apps-btn primary" type="button" data-app-refresh><span>刷新数据</span></button><button class="knowledge-xiaozhi-entry apps-xiaozhi-entry" id="apps-xiaozhi-entry" type="button" data-app-xiaozhi aria-controls="knowledge-xiaozhi-panel" aria-expanded="false" aria-label="问问小智"><span class="knowledge-xiaozhi-entry-mark"><svg class="icon"><use href="#ico-spark"/></svg></span><span id="apps-xiaozhi-entry-label">问问小智</span><svg class="icon"><use id="apps-xiaozhi-entry-icon" href="#ico-expand"/></svg></button></div></header><div id="apps-new-data" class="apps-update" hidden><span>有新数据，刷新查看</span><button class="apps-link" data-app-refresh>刷新</button></div>`;
   }
   function empty(text,sub='') {return `<div class="apps-empty"><span class="apps-symbol">▦</span><strong>${esc(text)}</strong>${esc(sub)}</div>`;}
   function renderList() {
@@ -142,7 +142,7 @@ window.AppsDataUI = (() => {
       else if('appHistory'in d)detail(d.appHistory);
       else if('appDownload'in d)downloadTable();
       else if('appTask'in d)task(historySnapshot.find(r=>r.id===d.appTask));
-      else if('appDemo'in d)demo();
+      else if('appXiaozhi'in d){const entry=q('#apps-xiaozhi-entry'),panel=q('#knowledge-xiaozhi-panel');window.setKnowledgeXiaozhiExpanded?.(!panel?.classList.contains('expanded'),entry);}
       else if('appClose'in d)b.closest('dialog').close();
       else if('appIdentity'in d){identity();q('#apps-demo-dialog').close();navigate();}
       else if('appSimulate'in d){const scenario=q('#apps-demo-scenario').value;const changed=state.user!==q('#apps-demo-user').value;if(changed)identity();lastRun=M.run(state.user,scenario,context());q('#apps-demo-dialog').close();if(changed)navigate();task(lastRun);if(q('#apps-new-data'))q('#apps-new-data').hidden=fingerprint()===loadedFingerprint;nav();}

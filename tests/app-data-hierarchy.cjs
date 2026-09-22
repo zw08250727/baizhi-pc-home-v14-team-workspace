@@ -25,6 +25,16 @@ const baseURL = process.env.PROTOTYPE_URL || 'http://127.0.0.1:4173';
     assert.equal(await page.locator('#page-crumb').innerText(), '知识库');
     assert.match(await page.locator('.apps-breadcrumb').innerText(), /知识库\s*\/\s*应用数据/);
     assert.equal(await page.locator('.apps-page-head h1').innerText(), '应用数据');
+    assert.equal(await page.locator('#apps-xiaozhi-entry').count(), 1);
+    assert.equal(await page.locator('[data-app-demo]').count(), 0);
+    await page.locator('#apps-xiaozhi-entry').click();
+    assert.equal(await page.locator('#knowledge-xiaozhi-panel').getAttribute('aria-hidden'), 'false');
+    assert.match(await page.locator('#knowledge-xiaozhi-scope').innerText(), /应用数据/);
+    const openWorkspaceBox = await page.locator('.apps-workspace').boundingBox();
+    const openPanelBox = await page.locator('#knowledge-xiaozhi-panel').boundingBox();
+    assert.ok(openWorkspaceBox && openPanelBox);
+    assert.ok(openWorkspaceBox.x + openWorkspaceBox.width <= openPanelBox.x, '小智展开后应用数据工作区不能与侧栏重叠');
+    await page.locator('#knowledge-xiaozhi-close').click();
     const workspaceBox = await page.locator('.apps-workspace').boundingBox();
     const knowledgeBox = await page.locator('.knowledge-workspace').evaluate(el => {
       const style = getComputedStyle(el);
@@ -64,6 +74,8 @@ const baseURL = process.env.PROTOTYPE_URL || 'http://127.0.0.1:4173';
     await page.goto(`${baseURL}/app.html?workspace=team`);
     await page.locator('#apps-entry').click();
     assert.equal(await page.locator('.apps-page-head h1').innerText(), '应用数据');
+    assert.equal(await page.locator('#apps-xiaozhi-entry').count(), 1);
+    assert.equal(await page.locator('[data-app-demo]').count(), 0);
     assert.equal(await page.locator('.team-app-data-group').count(), 0);
     assert.deepEqual(await page.locator('.apps-name strong').allTextContents(), ['销售洞察', '客户商机']);
 

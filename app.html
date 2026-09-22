@@ -2225,6 +2225,7 @@
     .knowledge-breadcrumb button:hover { color: #2e63b6; }
     .knowledge-heading h1 { margin: 5px 0 0; color: #202735; font-size: 20px; font-weight: 650; line-height: 28px; }
     .knowledge-heading p { margin: 2px 0 0; color: #9099a7; font-size: 10px; line-height: 16px; }
+    .knowledge-header-tools { display: flex; min-width: 0; align-items: center; justify-content: flex-end; gap: 8px; }
     .knowledge-header-actions { display: flex; align-items: center; gap: 8px; }
     .knowledge-header-actions[hidden] { display: none !important; }
     .knowledge-action { display: inline-flex; height: 34px; align-items: center; justify-content: center; gap: 6px; padding: 0 11px; border: 1px solid #dfe4ea; border-radius: 8px; color: #4f5b6d; background: #fff; cursor: pointer; font-size: 10px; }
@@ -2238,6 +2239,14 @@
     .knowledge-action .action-chevron { width: 12px; height: 12px; margin-left: 4px; }
     .knowledge-action.icon-only { width: 34px; padding: 0; }
     .knowledge-header-actions .knowledge-action[hidden] { display: none !important; }
+    .knowledge-xiaozhi-entry, .knowledge-preview-xiaozhi { display: inline-flex; height: 34px; flex: 0 0 auto; align-items: center; justify-content: center; gap: 7px; padding: 0 10px; border: 1px solid #d8dde5; border-radius: 17px; color: #303541; background: #fff; box-shadow: 0 1px 2px rgba(28,36,49,.035); cursor: pointer; font-size: 10px; font-weight: 560; white-space: nowrap; transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease, transform 160ms ease; }
+    .knowledge-xiaozhi-entry:hover, .knowledge-preview-xiaozhi:hover { border-color: #bfc6d0; color: #191d25; background: #fbfcfd; box-shadow: 0 4px 12px rgba(31,42,59,.08); transform: translateY(-1px); }
+    .knowledge-xiaozhi-entry:focus-visible, .knowledge-preview-xiaozhi:focus-visible { outline: 2px solid rgba(47,111,228,.4); outline-offset: 2px; }
+    .knowledge-xiaozhi-entry[aria-expanded="true"], .knowledge-preview-xiaozhi[aria-expanded="true"] { border-color: #aeb7c4; background: #f7f8fa; box-shadow: inset 0 0 0 1px rgba(42,49,61,.04); }
+    .knowledge-xiaozhi-entry-mark { display: inline-flex; width: 24px; height: 24px; flex: 0 0 auto; align-items: center; justify-content: center; border-radius: 50%; color: #fff; background: #30333a; }
+    .knowledge-xiaozhi-entry-mark .icon { width: 12px; height: 12px; }
+    .knowledge-xiaozhi-entry > .icon, .knowledge-preview-xiaozhi > .icon { width: 11px; height: 11px; color: #5d6470; transition: transform 180ms ease; }
+    .knowledge-xiaozhi-entry[aria-expanded="true"] > .icon, .knowledge-preview-xiaozhi[aria-expanded="true"] > .icon { transform: rotate(180deg); }
     .knowledge-toolbar { display: flex; min-height: 70px; align-items: center; justify-content: space-between; gap: 18px; padding: 14px 22px; border-bottom: 1px solid #edf0f4; }
     .knowledge-filters { display: flex; align-items: center; gap: 10px; }
     .knowledge-filter-label { display: flex; align-items: center; gap: 7px; color: #697386; font-size: 10px; }
@@ -2308,6 +2317,7 @@
     .knowledge-preview-actions { display: flex; min-height: 56px; align-items: center; justify-content: flex-end; gap: 8px; padding: 10px 18px; border-top: 1px solid #e7eaee; background: #fff; }
     .knowledge-preview-actions button { height: 32px; padding: 0 11px; border: 1px solid #dbe1e9; border-radius: 8px; color: #526074; background: #fff; cursor: pointer; font-size: 9px; }
     .knowledge-preview-actions button.primary { border-color: #2f6fe4; color: #fff; background: #2f6fe4; }
+    .knowledge-preview-actions .knowledge-preview-xiaozhi { height: 34px; padding: 0 10px; border-radius: 17px; color: #303541; background: #fff; }
     .knowledge-preview-pagination { display: flex; margin-right: auto; align-items: center; gap: 6px; color: #7f8998; font-size: 9px; }
     .knowledge-preview-pagination button { display: inline-flex; width: 30px; align-items: center; justify-content: center; padding: 0; border-color: transparent; }
     .knowledge-preview-pagination button:first-child .icon { transform: rotate(90deg); }
@@ -2333,6 +2343,29 @@
     .knowledge-workspace.file-open .knowledge-preview-paper h3 { margin-top: 30px; font-size: 14px; }
     .knowledge-workspace.file-open .knowledge-preview-audio { min-height: 720px; }
     .knowledge-workspace.file-open .knowledge-preview-actions { position: sticky; z-index: 2; bottom: 0; }
+    .knowledge-xiaozhi-panel { position: fixed; z-index: 54; top: 72px; right: 0; bottom: 0; display: block; width: 384px; overflow: hidden; border-left: 1px solid #dce2e9; background: #fff; box-shadow: -18px 0 42px rgba(31,52,83,.11); opacity: 0; visibility: hidden; transform: translateX(100%); pointer-events: none; transition: opacity 160ms ease, transform 240ms cubic-bezier(.2,.8,.2,1), visibility 160ms ease; }
+    .knowledge-xiaozhi-panel.expanded { opacity: 1; visibility: visible; transform: none; pointer-events: auto; }
+    .knowledge-xiaozhi-panel .xiaozhi-panel { display: flex; width: 100%; height: 100%; min-height: 0; visibility: visible; opacity: 1; }
+    .knowledge-xiaozhi-panel .xiaozhi-head { min-height: 72px; padding-right: 18px; padding-left: 18px; }
+    .knowledge-xiaozhi-panel .xiaozhi-body { padding: 20px 18px 18px; }
+    .knowledge-xiaozhi-panel .xiaozhi-composer { min-height: 188px; }
+    .knowledge-xiaozhi-messages { display: flex; min-height: 92px; max-height: min(360px, 42vh); overflow: auto; margin: 0 0 14px; padding: 0 1px 2px; flex: 1; flex-direction: column; gap: 9px; }
+    .knowledge-xiaozhi-answer { margin: 0; padding: 11px 12px; border: 1px solid #e6ebf1; border-radius: 10px; color: #59677b; background: #f7f9fb; font-size: 10px; line-height: 18px; }
+    .knowledge-xiaozhi-answer-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 5px; }
+    .knowledge-xiaozhi-answer-head strong { color: #2c384c; font-size: 10px; font-weight: 620; }
+    .knowledge-xiaozhi-answer-head small { color: #a0a9b5; font-size: 8px; white-space: nowrap; }
+    .knowledge-xiaozhi-answer p { margin: 0; }
+    .knowledge-xiaozhi-note { margin: -7px 0 11px; color: #a1a9b5; font-size: 9px; }
+    .knowledge-xiaozhi-chat-row { display: flex; margin: 0; }
+    .knowledge-xiaozhi-chat-row.user { justify-content: flex-end; }
+    .knowledge-xiaozhi-chat-row span { max-width: 88%; padding: 9px 10px; border-radius: 10px 10px 10px 3px; color: #4e5d72; background: #f2f5f8; font-size: 10px; line-height: 17px; }
+    .knowledge-xiaozhi-chat-row.user span { border-radius: 10px 10px 3px 10px; color: #fff; background: #2e63b6; }
+    .knowledge-xiaozhi-scope { display: flex; min-width: 0; align-items: center; gap: 8px; margin: 0 0 14px; padding: 10px 11px; border: 1px solid #e4e8ed; border-radius: 10px; color: #687488; background: #fafbfc; font-size: 9px; }
+    .knowledge-xiaozhi-scope .icon { width: 14px; height: 14px; flex: 0 0 auto; color: #52647e; }
+    .knowledge-xiaozhi-scope span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    body.knowledge-xiaozhi-open .knowledge-workspace:not([hidden]),
+    body.knowledge-xiaozhi-open .apps-workspace:not([hidden]) { width: calc(100% - 424px); margin-right: 404px; margin-left: 20px; }
+    body.knowledge-xiaozhi-open .apps-workspace:not([hidden]) { max-width: none; }
     .recycle-workspace { width: calc(100% - 40px); max-width: 1440px; min-height: calc(100vh - 100px); margin: 20px auto; overflow: hidden; border: 1px solid #e1e5ea; border-radius: 16px; background: #fff; }
     .recycle-header { display: flex; min-height: 96px; align-items: center; justify-content: space-between; gap: 20px; padding: 18px 22px; border-bottom: 1px solid #edf0f4; }
     .recycle-heading { display: flex; min-width: 0; align-items: flex-start; gap: 12px; }
@@ -2362,6 +2395,7 @@
     .recycle-empty { display: grid; min-height: 390px; place-items: center; color: #929ba9; font-size: 11px; }
     .recycle-empty[hidden] { display: none !important; }
     @media (max-width: 1120px) {
+      body.knowledge-xiaozhi-open .knowledge-workspace:not([hidden]) { width: calc(100% - 40px); margin-right: auto; margin-left: auto; }
       .knowledge-table-head[data-schema], .knowledge-file-row[data-schema] { gap: 10px; grid-template-columns: 30px minmax(220px,1.4fr) 72px 76px 84px 106px 58px; }
       .knowledge-table-head[data-schema] > :nth-child(4), .knowledge-file-row[data-schema] > :nth-child(4), .knowledge-table-head[data-schema] > :nth-child(6), .knowledge-file-row[data-schema] > :nth-child(6) { display: none; }
       .knowledge-preview { width: 56%; }
@@ -2369,7 +2403,12 @@
     @media (max-width: 760px) {
       .knowledge-workspace { width: calc(100% - 24px); margin: 12px auto; }
       .knowledge-workspace-header, .knowledge-toolbar { align-items: flex-start; flex-direction: column; }
-      .knowledge-header-actions, .knowledge-filters, .knowledge-view-tools { width: 100%; overflow-x: auto; }
+      .knowledge-header-tools, .knowledge-header-actions, .knowledge-filters, .knowledge-view-tools { width: 100%; overflow-x: auto; }
+      .knowledge-header-tools { justify-content: flex-start; padding: 2px 0; }
+      body.knowledge-xiaozhi-open .knowledge-workspace:not([hidden]),
+      body.knowledge-xiaozhi-open .apps-workspace:not([hidden]) { width: calc(100% - 24px); margin: 12px auto; }
+      .knowledge-xiaozhi-panel { top: 60px; width: min(384px, 100vw); }
+      .knowledge-xiaozhi-panel .xiaozhi-head { min-height: 60px; }
       .knowledge-storage { align-items: stretch; flex-direction: column; gap: 14px; }
       .knowledge-storage-item { width: 100%; max-width: none; }
       .knowledge-table-head { display: none; }
@@ -2516,7 +2555,7 @@
   <script src="assets/apps-data-editor.js?v=apps-editing-v1"></script>
   <script src="assets/apps-table-export.js?v=apps-readonly-download"></script>
   <script src="assets/apps-grid-tools.js?v=apps-grid-filter-sort-v1"></script>
-  <script src="assets/apps-data-ui.js?v=apps-editing-v1"></script>
+  <script src="assets/apps-data-ui.js?v=apps-xiaozhi-v1"></script>
   <script src="assets/agent-artifacts-model.js?v=app-data-hierarchy"></script>
   <script src="assets/agent-artifacts-ui.js?v=v14-apps-data-unified"></script>
   <script src="assets/knowledge-file-actions.js?v=app-data-hierarchy"></script>
@@ -2752,7 +2791,7 @@
     <section class="knowledge-workspace" data-main-view="knowledge" hidden aria-label="知识库文件工作台">
       <header class="knowledge-workspace-header">
         <div class="knowledge-heading"><div class="knowledge-breadcrumb"><button id="knowledge-root-link">知识库</button><span>/</span><span id="knowledge-breadcrumb-current">我的文件</span></div><h1 id="knowledge-folder-title">我的文件</h1><p id="knowledge-folder-meta">管理目录中的文件、网页与同步内容</p></div>
-        <div class="knowledge-header-actions" id="knowledge-header-actions"><button class="knowledge-action primary" id="knowledge-upload"><svg class="icon"><use href="#ico-upload"/></svg><span id="knowledge-primary-label">上传文件</span></button><button class="knowledge-action ai-action" id="knowledge-ai-ppt"><svg class="icon"><use href="#ico-skill-slides"/></svg>AI 智绘 PPT<svg class="icon action-chevron"><use href="#ico-chevron"/></svg></button><button class="knowledge-action" id="knowledge-add-web"><svg class="icon"><use href="#ico-globe"/></svg>添加网址</button><button class="knowledge-action" id="knowledge-quick-note"><svg class="icon"><use href="#ico-skill-notes"/></svg>随笔记录</button></div>
+        <div class="knowledge-header-tools"><div class="knowledge-header-actions" id="knowledge-header-actions"><button class="knowledge-action primary" id="knowledge-upload"><svg class="icon"><use href="#ico-upload"/></svg><span id="knowledge-primary-label">上传文件</span></button><button class="knowledge-action ai-action" id="knowledge-ai-ppt"><svg class="icon"><use href="#ico-skill-slides"/></svg>AI 智绘 PPT<svg class="icon action-chevron"><use href="#ico-chevron"/></svg></button><button class="knowledge-action" id="knowledge-add-web"><svg class="icon"><use href="#ico-globe"/></svg>添加网址</button><button class="knowledge-action" id="knowledge-quick-note"><svg class="icon"><use href="#ico-skill-notes"/></svg>随笔记录</button></div><button class="knowledge-xiaozhi-entry" id="knowledge-xiaozhi-entry" type="button" aria-controls="knowledge-xiaozhi-panel" aria-expanded="false" aria-label="问问小智"><span class="knowledge-xiaozhi-entry-mark"><svg class="icon"><use href="#ico-spark"/></svg></span><span id="knowledge-xiaozhi-entry-label">问问小智</span><svg class="icon"><use id="knowledge-xiaozhi-entry-icon" href="#ico-expand"/></svg></button></div>
       </header>
       <div class="knowledge-toolbar">
         <div class="knowledge-filters"><label class="knowledge-filter-label">来源<select id="knowledge-source-filter"><option value="all">全部来源</option></select></label><label class="knowledge-filter-label" id="knowledge-type-filter-wrap">类型<select id="knowledge-type-filter"><option value="all">全部类型</option></select></label><label class="knowledge-filter-label">更新时间<input id="knowledge-date-filter" type="date" aria-label="筛选更新时间" /></label></div>
@@ -2770,10 +2809,22 @@
         <aside class="knowledge-preview" id="knowledge-preview" hidden aria-label="文件预览">
           <header class="knowledge-preview-head"><div class="knowledge-preview-title"><span class="knowledge-file-mark" id="knowledge-preview-mark"><svg class="icon"><use href="#ico-file"/></svg></span><span><strong id="knowledge-preview-title">文件预览</strong><small id="knowledge-preview-meta">文件详情</small></span></div><button id="knowledge-preview-close" aria-label="关闭文件预览"><svg class="icon"><use href="#ico-x"/></svg></button></header>
           <div class="knowledge-preview-body" id="knowledge-preview-body"></div>
-          <div class="knowledge-preview-actions"><div class="knowledge-preview-pagination" aria-label="文档浏览控制"><button type="button" id="knowledge-preview-prev" aria-label="上一页"><svg class="icon"><use href="#ico-chevron"/></svg></button><span class="knowledge-preview-page">1 / 12</span><button type="button" id="knowledge-preview-next" aria-label="下一页"><svg class="icon"><use href="#ico-chevron"/></svg></button><span class="knowledge-preview-zoom">100%</span></div><button class="primary" id="knowledge-preview-use">引用到小智</button></div>
+          <div class="knowledge-preview-actions"><div class="knowledge-preview-pagination" aria-label="文档浏览控制"><button type="button" id="knowledge-preview-prev" aria-label="上一页"><svg class="icon"><use href="#ico-chevron"/></svg></button><span class="knowledge-preview-page">1 / 12</span><button type="button" id="knowledge-preview-next" aria-label="下一页"><svg class="icon"><use href="#ico-chevron"/></svg></button><span class="knowledge-preview-zoom">100%</span></div><button class="knowledge-preview-xiaozhi" id="knowledge-preview-use" type="button" aria-controls="knowledge-xiaozhi-panel" aria-expanded="false"><span class="knowledge-xiaozhi-entry-mark"><svg class="icon"><use href="#ico-spark"/></svg></span><span id="knowledge-preview-xiaozhi-label">问问小智</span><svg class="icon"><use id="knowledge-preview-xiaozhi-icon" href="#ico-expand"/></svg></button></div>
         </aside>
       </div>
     </section>
+
+    <aside class="knowledge-xiaozhi-panel" id="knowledge-xiaozhi-panel" aria-labelledby="knowledge-xiaozhi-title" aria-hidden="true">
+      <div class="xiaozhi-panel">
+        <div class="xiaozhi-head"><div class="xiaozhi-identity"><span class="xiaozhi-mark"><svg class="icon"><use href="#ico-spark"/></svg></span><div><h2 id="knowledge-xiaozhi-title">小智</h2><p id="knowledge-xiaozhi-subtitle">使用当前知识目录继续工作</p></div></div><div class="xiaozhi-head-actions"><button id="knowledge-xiaozhi-history" type="button" aria-label="查看小智历史会话"><svg class="icon"><use href="#ico-clock"/></svg></button><button id="knowledge-xiaozhi-close" type="button" aria-label="收起小智"><svg class="icon"><use href="#ico-x"/></svg></button></div></div>
+        <div class="xiaozhi-body">
+          <div class="knowledge-xiaozhi-scope"><svg class="icon"><use href="#ico-folder"/></svg><span id="knowledge-xiaozhi-scope">当前目录：我的文件</span></div>
+          <div class="xiaozhi-intro"><span class="xiaozhi-state"><i></i>当前目录已就绪</span><h3>基于当前知识继续处理</h3><p>小智会在你的访问权限内引用当前目录或文件，帮助总结、分析和生成内容。</p><div class="xiaozhi-suggestions"><button type="button" data-knowledge-xiaozhi-prompt="总结当前目录的核心资料">总结目录资料</button><button type="button" data-knowledge-xiaozhi-prompt="提取当前资料中的行动项与待确认问题">提取行动项</button><button type="button" data-knowledge-xiaozhi-prompt="基于当前资料整理一份简报">整理简报</button></div></div>
+          <div class="knowledge-xiaozhi-messages" id="knowledge-xiaozhi-messages" aria-live="polite"><article class="knowledge-xiaozhi-answer"><div class="knowledge-xiaozhi-answer-head"><strong>资料已准备好</strong><small>示例回答 · 未连接 AI 服务</small></div><p>已加载当前知识范围。你可以让小智总结文件重点、提取行动项，或基于资料整理一份简报。</p></article></div>
+          <div class="xiaozhi-composer"><div class="xiaozhi-context"><span>引用资料</span><button type="button" class="selected" id="knowledge-xiaozhi-context"><svg class="icon"><use href="#ico-book"/></svg><span>当前目录</span></button></div><textarea id="knowledge-xiaozhi-input" placeholder="输入要继续完成的工作…" aria-label="向小智输入知识库任务"></textarea><div class="xiaozhi-composer-foot"><span id="knowledge-xiaozhi-hint">已引用「我的文件」</span><button class="xiaozhi-send" id="knowledge-xiaozhi-send" type="button" aria-label="发送给小智" disabled><svg class="icon"><use href="#ico-send"/></svg></button></div></div>
+        </div>
+      </div>
+    </aside>
 
     <section class="contacts-workspace" data-main-view="contacts" hidden aria-label="联系人">
       <div id="contacts-root"></div>
@@ -3002,6 +3053,7 @@
       if (ArtifactUI.guard(() => showMainView(target, options))) return;
       const next = $(`[data-main-view="${target}"]`);
       if (!next) return;
+      if (target !== "knowledge") window.setKnowledgeXiaozhiExpanded?.(false);
       $$('[data-main-view]').forEach((view) => { const active = view === next; view.hidden = !active; view.setAttribute("aria-hidden", String(!active)); });
       $("#page-crumb").textContent = mainViewTitles[target] || "企业AI工作台";
       setActiveSidebar(target);
@@ -3188,6 +3240,57 @@
       knowledgeCatalog.file.splice(originalIndex, 1);
     };
     let activeKnowledgeFolder = "我的文件";
+    let knowledgeXiaozhiContextName = activeKnowledgeFolder;
+    let knowledgeXiaozhiReturnFocus = null;
+    const knowledgeXiaozhiPanel = $("#knowledge-xiaozhi-panel");
+    const knowledgeXiaozhiEntry = $("#knowledge-xiaozhi-entry");
+    const knowledgeXiaozhiPreviewEntry = $("#knowledge-preview-use");
+    const knowledgeXiaozhiMessages = $("#knowledge-xiaozhi-messages");
+    const knowledgeXiaozhiSeed = (name, kind) => `${kind === "file" ? "当前文件" : "当前目录"}「${name}」已准备好。可以先总结重点、提取行动项，或把资料整理成一份可继续编辑的简报。`;
+    const resetKnowledgeXiaozhiMessages = (name, kind) => {
+      knowledgeXiaozhiMessages.innerHTML = `<article class="knowledge-xiaozhi-answer"><div class="knowledge-xiaozhi-answer-head"><strong>资料已准备好</strong><small>示例回答 · 未连接 AI 服务</small></div><p>${knowledgeEscape(knowledgeXiaozhiSeed(name, kind))}</p></article>`;
+    };
+    const appendKnowledgeXiaozhiChat = (role, message) => {
+      const row = document.createElement("div");
+      row.className = `knowledge-xiaozhi-chat-row ${role}`;
+      const bubble = document.createElement("span");
+      bubble.textContent = message;
+      row.appendChild(bubble);
+      knowledgeXiaozhiMessages.appendChild(row);
+      knowledgeXiaozhiMessages.scrollTop = knowledgeXiaozhiMessages.scrollHeight;
+    };
+    const setKnowledgeXiaozhiContext = (name, kind = "folder") => {
+      knowledgeXiaozhiContextName = name || activeKnowledgeFolder;
+      const isFile = kind === "file";
+      $("#knowledge-xiaozhi-scope").textContent = `${isFile ? "当前文件" : "当前目录"}：${knowledgeXiaozhiContextName}`;
+      $("#knowledge-xiaozhi-scope").previousElementSibling.querySelector("use").setAttribute("href", isFile ? "#ico-file" : "#ico-folder");
+      $("#knowledge-xiaozhi-subtitle").textContent = `使用「${knowledgeXiaozhiContextName}」继续工作`;
+      $("#knowledge-xiaozhi-context span").textContent = isFile ? "当前文件" : "当前目录";
+      $("#knowledge-xiaozhi-hint").textContent = `已引用「${knowledgeXiaozhiContextName}」`;
+      resetKnowledgeXiaozhiMessages(knowledgeXiaozhiContextName, kind);
+    };
+    const setKnowledgeXiaozhiExpanded = (expanded, returnFocus = null) => {
+      if (expanded && returnFocus) knowledgeXiaozhiReturnFocus = returnFocus;
+      knowledgeXiaozhiPanel.classList.toggle("expanded", expanded);
+      knowledgeXiaozhiPanel.setAttribute("aria-hidden", String(!expanded));
+      document.body.classList.toggle("knowledge-xiaozhi-open", expanded);
+      [knowledgeXiaozhiEntry, knowledgeXiaozhiPreviewEntry, $("#apps-xiaozhi-entry")].filter(Boolean).forEach((button) => {
+        button.setAttribute("aria-expanded", String(expanded));
+        button.setAttribute("aria-label", expanded ? "收起小智" : "问问小智");
+      });
+      $("#knowledge-xiaozhi-entry-label").textContent = expanded ? "收起小智" : "问问小智";
+      $("#knowledge-preview-xiaozhi-label").textContent = expanded ? "收起小智" : "问问小智";
+      const appsXiaozhiLabel = $("#apps-xiaozhi-entry-label");
+      if (appsXiaozhiLabel) appsXiaozhiLabel.textContent = expanded ? "收起小智" : "问问小智";
+      $("#knowledge-xiaozhi-entry-icon").setAttribute("href", expanded ? "#ico-collapse" : "#ico-expand");
+      $("#knowledge-preview-xiaozhi-icon").setAttribute("href", expanded ? "#ico-collapse" : "#ico-expand");
+      const appsXiaozhiIcon = $("#apps-xiaozhi-entry-icon");
+      if (appsXiaozhiIcon) appsXiaozhiIcon.setAttribute("href", expanded ? "#ico-collapse" : "#ico-expand");
+      if (expanded) setTimeout(() => $("#knowledge-xiaozhi-input").focus(), 180);
+      else if (knowledgeXiaozhiReturnFocus?.isConnected && !knowledgeXiaozhiReturnFocus.closest("[hidden]")) knowledgeXiaozhiReturnFocus.focus();
+    };
+    window.setKnowledgeXiaozhiExpanded = setKnowledgeXiaozhiExpanded;
+    window.setKnowledgeXiaozhiContext = setKnowledgeXiaozhiContext;
     let activeKnowledgeSchema = "file";
     const knowledgeSchemaForFolder = () => "file";
     const knowledgeFileNameHTML = (item) => `<span class="knowledge-file-name"><span class="knowledge-file-mark ${knowledgeEscape(item.mark || "")}"><svg class="icon"><use href="#${knowledgeEscape(item.icon || "ico-file")}"/></svg></span><span><strong>${knowledgeEscape(item.name)}</strong>${item.system ? "" : `<small>${knowledgeEscape(item.meta || "")}</small>`}</span></span>`;
@@ -3246,6 +3349,7 @@
       $("#knowledge-preview-body").innerHTML = item.preview === "audio" ? `<div class="knowledge-preview-audio"><span><svg class="icon"><use href="#ico-play"/></svg></span><h3>${knowledgeEscape(item.name)}</h3><p>${knowledgeEscape(item.duration || "语音内容")} · ${knowledgeEscape(item.source)}</p></div>` : `<article class="knowledge-preview-paper"><h2>${knowledgeEscape(item.name.replace(/\.[^.]+$/, ""))}</h2><p>该文档用于沉淀项目背景、设计决策与后续开发说明，支持在当前知识目录内持续更新和引用。</p><h3>核心内容</h3><p>当前方案围绕首页的信息架构、知识沉淀路径与智能体续接方式展开。文件内容在知识库列表页内直接打开，保留左侧目录上下文，用户无需跳转到新的页面。</p><ol><li>首页承担会议、闪念与知识资产的统一入口。</li><li>目录结构支持多级自定义，并保留来源和更新时间。</li><li>文件可直接打开阅读，也可以引用给小智或 Agent 继续处理。</li><li>关闭阅读器后，返回原目录及筛选状态。</li></ol><h3>文件与智能任务的关系</h3><p>知识文件既可以独立阅读，也可以作为任务上下文被引用。进入智能体后，系统继续沿用当前文件权限，不额外复制内容。</p><h3>使用说明</h3><p>阅读器直接占用原列表工作区；左侧目录树始终可见，点击其他目录会退出当前文件并展示对应列表。</p></article>`;
       $("#knowledge-preview").hidden = false;
       $(".knowledge-workspace").classList.add("file-open");
+      setKnowledgeXiaozhiContext(item.name, "file");
       ArtifactUI.preview(item);
     };
     const openKnowledgeFolder = (name, trigger = null) => {
@@ -3254,6 +3358,7 @@
       if (name.startsWith("artifacts:enterprise") && document.body.dataset.edition === "personal") name = "我的文件";
       activeKnowledgeFolder = name;
       activeKnowledgeSchema = knowledgeSchemaForFolder(name);
+      setKnowledgeXiaozhiContext(name, "folder");
       $("#knowledge-folder-title").textContent = name;
       $("#knowledge-breadcrumb-current").textContent = name;
       $("#knowledge-folder-meta").textContent = "管理目录中的文件、网页与同步内容";
@@ -3311,10 +3416,29 @@
     });
     $("#knowledge-table-head").addEventListener("change", (event) => { if (event.target.id !== "knowledge-check-all") return; $$("#knowledge-file-list .knowledge-check").forEach((checkbox) => { checkbox.checked = event.target.checked; }); updateKnowledgeSelection(); });
     [$("#knowledge-search-input"), $("#knowledge-source-filter"), $("#knowledge-type-filter"), $("#knowledge-date-filter")].forEach((control) => control.addEventListener(control.tagName === "INPUT" ? "input" : "change", renderKnowledgeFiles));
-    $("#knowledge-preview-close").addEventListener("click", ArtifactUI.closePreview);
+    $("#knowledge-preview-close").addEventListener("click", () => { ArtifactUI.closePreview(); setKnowledgeXiaozhiContext(activeKnowledgeFolder, "folder"); });
     $("#knowledge-preview-prev").addEventListener("click", () => showToast("已是文档第一页"));
     $("#knowledge-preview-next").addEventListener("click", () => showToast("原型演示：切换到下一页"));
-    $("#knowledge-preview-use").addEventListener("click", () => showToast("已将当前文件引用到小智"));
+    knowledgeXiaozhiEntry.addEventListener("click", () => setKnowledgeXiaozhiExpanded(!knowledgeXiaozhiPanel.classList.contains("expanded"), knowledgeXiaozhiEntry));
+    knowledgeXiaozhiPreviewEntry.addEventListener("click", () => setKnowledgeXiaozhiExpanded(!knowledgeXiaozhiPanel.classList.contains("expanded"), knowledgeXiaozhiPreviewEntry));
+    $("#knowledge-xiaozhi-close").addEventListener("click", () => setKnowledgeXiaozhiExpanded(false));
+    $("#knowledge-xiaozhi-history").addEventListener("click", () => showToast("正在打开当前知识范围的小智历史会话"));
+    const knowledgeXiaozhiInput = $("#knowledge-xiaozhi-input");
+    const knowledgeXiaozhiSend = $("#knowledge-xiaozhi-send");
+    const updateKnowledgeXiaozhiComposer = () => { knowledgeXiaozhiSend.disabled = !knowledgeXiaozhiInput.value.trim(); };
+    const sendKnowledgeXiaozhi = () => {
+      const prompt = knowledgeXiaozhiInput.value.trim();
+      if (!prompt) return;
+      appendKnowledgeXiaozhiChat("user", prompt);
+      showToast(`小智正在使用「${knowledgeXiaozhiContextName}」处理`);
+      knowledgeXiaozhiInput.value = "";
+      updateKnowledgeXiaozhiComposer();
+      setTimeout(() => appendKnowledgeXiaozhiChat("assistant", `已结合「${knowledgeXiaozhiContextName}」整理处理方向：先梳理资料主题，再标记关键信息、行动项与待确认问题。你可以继续指定输出格式。`), 420);
+    };
+    knowledgeXiaozhiInput.addEventListener("input", updateKnowledgeXiaozhiComposer);
+    knowledgeXiaozhiInput.addEventListener("keydown", (event) => { if (event.key === "Enter" && !event.shiftKey && !event.isComposing) { event.preventDefault(); sendKnowledgeXiaozhi(); } });
+    knowledgeXiaozhiSend.addEventListener("click", sendKnowledgeXiaozhi);
+    $$('[data-knowledge-xiaozhi-prompt]').forEach((button) => button.addEventListener("click", () => { knowledgeXiaozhiInput.value = button.dataset.knowledgeXiaozhiPrompt; knowledgeXiaozhiInput.focus(); updateKnowledgeXiaozhiComposer(); }));
     $("#knowledge-upload").addEventListener("click", () => showToast(`正在向「${activeKnowledgeFolder}」上传文件`));
     $("#knowledge-ai-ppt").addEventListener("click", () => showToast(`正在基于「${activeKnowledgeFolder}」选择 AI 智绘 PPT 模板`));
     $("#knowledge-add-web").addEventListener("click", () => showToast(`正在向「${activeKnowledgeFolder}」添加网址`));
